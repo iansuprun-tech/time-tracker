@@ -105,7 +105,7 @@ async function saveNote() {
       block.status === 'done' || block.status === 'dropped' ? 'opacity-60' : '',
     ]"
   >
-    <div class="flex items-start gap-3">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
           <span :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''">
@@ -182,11 +182,11 @@ async function saveNote() {
         </ul>
       </div>
 
-      <div v-if="editable" class="flex shrink-0 items-center gap-1">
+      <div v-if="editable" class="flex shrink-0 items-center gap-1 self-start">
         <button
           v-if="block.status !== 'done'"
           :disabled="busy"
-          class="rounded px-2 py-1 text-xs"
+          class="min-w-14 rounded px-2 py-2 text-xs sm:py-1"
           :class="running ? 'border border-black/15 dark:border-white/20' : 'bg-emerald-600 text-white'"
           @click="running ? stopTimer() : startTimer()"
         >
@@ -194,13 +194,13 @@ async function saveNote() {
         </button>
         <button
           :disabled="busy"
-          class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+          class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
           @click="toggleDone"
         >
           {{ block.status === "done" ? "↺" : "✓" }}
         </button>
         <button
-          class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+          class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
           @click="noteOpen = !noteOpen"
         >
           +заметка

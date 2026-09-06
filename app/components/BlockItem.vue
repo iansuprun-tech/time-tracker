@@ -2,6 +2,7 @@
 type Block = {
   id: number;
   title: string;
+  category: string | null;
   plannedMin: number | null;
   actualMin: number | null;
   status: string;
@@ -17,22 +18,27 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ changed: [] }>();
 
-const STATUS_LABEL: Record<string, string> = {
-  todo: "к работе",
-  doing: "в работе",
-  done: "готово",
-  blocked: "блокер",
-  dropped: "отменено",
-};
+const STATUSES = [
+  { value: "todo", label: "к работе" },
+  { value: "doing", label: "в работе" },
+  { value: "done", label: "готово" },
+  { value: "blocked", label: "блокер" },
+  { value: "dropped", label: "отменено" },
+];
 
 const noteOpen = ref(false);
 const noteText = ref("");
+const factOpen = ref(false);
+const factValue = ref(0);
 const busy = ref(false);
 
 const running = computed(() => Boolean(props.block.runningSince));
 const fact = computed(() => props.block.actualMin ?? props.block.trackedMin);
 const over = computed(
-  () => props.block.plannedMin != null && props.block.plannedMin > 0 && fact.value > props.block.plannedMin * 1.2,
+  () =>
+    props.block.plannedMin != null &&
+    props.block.plannedMin > 0 &&
+    fact.value > props.block.plannedMin * 1.2,
 );
 
 async function call(fn: () => Promise<unknown>) {
@@ -46,22 +52,43 @@ async function call(fn: () => Promise<unknown>) {
   }
 }
 
-const startTimer = () =>
-  call(() => $fetch("/api/timer/start", { method: "POST", body: { blockId: props.block.id } }));
-const stopTimer = () => call(() => $fetch("/api/timer/stop", { method: "POST" }));
-const toggleDone = () =>
+type BlockPatch = { status?: string; actualMin?: number | null; title?: string; category?: string | null };
+
+const patch = (body: BlockPatch) =>
   call(() =>
-    $fetch(`/api/blocks/${props.block.id}`, {
-      method: "PATCH",
-      body: { status: props.block.status === "done" ? "todo" : "done" },
+    $fetch<{ ok: boolean }>("/api/blocks/update", {
+      method: "POST",
+      body: { id: props.block.id, ...body },
     }),
   );
-const remove = () => call(() => $fetch(`/api/blocks/${props.block.id}`, { method: "DELETE" }));
+
+const startTimer = () =>
+  call(() => $fetch<{ ok: boolean }>("/api/timer/start", { method: "POST", body: { blockId: props.block.id } }));
+const stopTimer = () => call(() => $fetch<{ ok: boolean }>("/api/timer/stop", { method: "POST" }));
+const toggleDone = () => patch({ status: props.block.status === "done" ? "todo" : "done" });
+const remove = () =>
+  call(() => $fetch<{ ok: boolean }>("/api/blocks/delete", { method: "POST", body: { id: props.block.id } }));
+
+function openFact() {
+  factValue.value = fact.value;
+  factOpen.value = true;
+}
+
+async function saveFact() {
+  // null возвращает блок к автоподсчёту по интервалам таймера
+  await patch({ actualMin: factValue.value >= 0 ? factValue.value : null });
+  factOpen.value = false;
+}
+
+async function resetFact() {
+  await patch({ actualMin: null });
+  factOpen.value = false;
+}
 
 async function saveNote() {
   if (!noteText.value.trim()) return;
   await call(() =>
-    $fetch("/api/notes", { method: "POST", body: { blockId: props.block.id, text: noteText.value } }),
+    $fetch<{ ok: boolean }>("/api/notes", { method: "POST", body: { blockId: props.block.id, text: noteText.value } }),
   );
   noteText.value = "";
   noteOpen.value = false;
@@ -75,33 +102,76 @@ async function saveNote() {
       running
         ? 'border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20'
         : 'border-black/10 dark:border-white/15',
-      block.status === 'done' ? 'opacity-60' : '',
+      block.status === 'done' || block.status === 'dropped' ? 'opacity-60' : '',
     ]"
   >
     <div class="flex items-start gap-3">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
-          <span :class="block.status === 'done' ? 'line-through' : ''">{{ block.title }}</span>
+          <span :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''">
+            {{ block.title }}
+          </span>
+          <span
+            v-if="block.category"
+            class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
+          >
+            {{ block.category }}
+          </span>
           <span
             v-if="block.isUnplanned"
             class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
           >
             вне плана
           </span>
-          <span
-            v-if="block.status !== 'todo' && block.status !== 'doing'"
-            class="text-[11px] text-black/50 dark:text-white/50"
-          >
-            {{ STATUS_LABEL[block.status] }}
+          <span v-if="block.status === 'blocked'" class="text-[11px] text-red-600 dark:text-red-400">
+            блокер
           </span>
         </div>
 
         <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
           <span v-if="block.plannedMin != null">план {{ block.plannedMin }}м</span>
+
           <ElapsedTimer v-if="running" :since="block.runningSince!" :base-min="block.trackedMin" />
-          <span v-else-if="fact > 0" :class="over ? 'text-red-600 dark:text-red-400' : ''">
-            факт {{ fact }}м
-          </span>
+
+          <form v-else-if="factOpen" class="flex items-center gap-1" @submit.prevent="saveFact">
+            <input
+              v-model.number="factValue"
+              type="number"
+              min="0"
+              step="5"
+              autofocus
+              class="w-16 rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+            />
+            <button class="rounded border border-black/15 px-1.5 py-0.5 dark:border-white/20">ок</button>
+            <button
+              v-if="block.actualMin != null"
+              type="button"
+              class="text-black/40 dark:text-white/40"
+              @click="resetFact"
+            >
+              сброс
+            </button>
+          </form>
+
+          <button
+            v-else-if="editable"
+            class="underline decoration-dotted underline-offset-2"
+            :class="over ? 'text-red-600 dark:text-red-400' : ''"
+            @click="openFact"
+          >
+            факт {{ fact }}м<span v-if="block.actualMin != null">*</span>
+          </button>
+
+          <span v-else-if="fact > 0">факт {{ fact }}м</span>
+
+          <select
+            v-if="editable"
+            :value="block.status"
+            class="rounded border border-black/10 bg-transparent px-1 py-0.5 dark:border-white/15"
+            @change="patch({ status: ($event.target as HTMLSelectElement).value })"
+          >
+            <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
+          </select>
         </div>
 
         <ul

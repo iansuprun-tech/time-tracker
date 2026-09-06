@@ -1,9 +1,31 @@
 <script setup lang="ts">
 const date = ref(tomorrowDate());
+const today = ref(localDate());
+
 const { data, refresh } = await useFetch("/api/day", { query: { date } });
+const { data: todayData } = await useFetch("/api/day", { query: { date: today } });
 
 const blocks = computed(() => data.value?.blocks ?? []);
 const plannedMin = computed(() => blocks.value.reduce((s, b) => s + (b.plannedMin ?? 0), 0));
+
+// копировать есть что, только если сегодня был план и завтра ещё пусто
+const canCopy = computed(
+  () => blocks.value.length === 0 && (todayData.value?.blocks.length ?? 0) > 0,
+);
+const copying = ref(false);
+
+async function copyFromToday() {
+  copying.value = true;
+  try {
+    await $fetch<{ copied: number }>("/api/blocks/copy", {
+      method: "POST",
+      body: { fromDate: today.value, toDate: date.value },
+    });
+    await refresh();
+  } finally {
+    copying.value = false;
+  }
+}
 </script>
 
 <template>
@@ -18,9 +40,29 @@ const plannedMin = computed(() => blocks.value.reduce((s, b) => s + (b.plannedMi
       <NuxtLink to="/" class="text-sm underline underline-offset-4">← Сегодня</NuxtLink>
     </header>
 
+    <button
+      v-if="canCopy"
+      :disabled="copying"
+      class="mb-4 w-full rounded border border-dashed border-black/20 px-4 py-3 text-sm text-black/60 disabled:opacity-50 dark:border-white/25 dark:text-white/60"
+      @click="copyFromToday"
+    >
+      Скопировать план с сегодня ({{ todayData?.blocks.length }} блоков)
+    </button>
+
     <ul class="space-y-2">
-      <BlockItem v-for="b in blocks" :key="b.id" :block="b" :notes="[]" :editable="false" @changed="refresh" />
+      <BlockItem
+        v-for="b in blocks"
+        :key="b.id"
+        :block="b"
+        :notes="[]"
+        :editable="false"
+        @changed="refresh"
+      />
     </ul>
+
+    <p v-if="!blocks.length && !canCopy" class="py-6 text-center text-sm text-black/40 dark:text-white/40">
+      Завтра пока пусто.
+    </p>
 
     <div class="mt-4">
       <AddBlock :date="date" hint="что делаем завтра" @added="refresh" />

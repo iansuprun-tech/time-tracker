@@ -2,20 +2,29 @@
 const props = defineProps<{ date: string; hint: string }>();
 const emit = defineEmits<{ added: [] }>();
 
+const { data: knownCategories } = await useFetch("/api/categories");
+
 const title = ref("");
 const plannedMin = ref<number | null>(null);
+const category = ref("");
 const saving = ref(false);
 
 async function submit() {
   if (!title.value.trim() || saving.value) return;
   saving.value = true;
   try {
-    await $fetch("/api/blocks", {
+    await $fetch<{ id: number }>("/api/blocks", {
       method: "POST",
-      body: { date: props.date, title: title.value, plannedMin: plannedMin.value },
+      body: {
+        date: props.date,
+        title: title.value,
+        plannedMin: plannedMin.value,
+        category: category.value,
+      },
     });
     title.value = "";
     plannedMin.value = null;
+    // категорию оставляем — подряд обычно заводят блоки одного типа
     emit("added");
   } finally {
     saving.value = false;
@@ -24,12 +33,21 @@ async function submit() {
 </script>
 
 <template>
-  <form class="flex gap-2" @submit.prevent="submit">
+  <form class="flex flex-wrap gap-2" @submit.prevent="submit">
     <input
       v-model="title"
       :placeholder="hint"
-      class="flex-1 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+      class="min-w-40 flex-1 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
     />
+    <input
+      v-model="category"
+      list="known-categories"
+      placeholder="категория"
+      class="w-28 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+    />
+    <datalist id="known-categories">
+      <option v-for="c in knownCategories ?? []" :key="c" :value="c" />
+    </datalist>
     <input
       v-model.number="plannedMin"
       type="number"

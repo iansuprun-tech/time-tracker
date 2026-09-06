@@ -9,7 +9,7 @@ const hours = computed(() => Math.round((Date.now() - new Date(props.startedAt).
 async function resolve() {
   busy.value = true;
   try {
-    await $fetch("/api/timer/resolve-stale", {
+    await $fetch<{ ok: boolean }>("/api/timer/resolve-stale", {
       method: "POST",
       body: { entryId: props.entryId, minutes: minutes.value },
     });

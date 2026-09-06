@@ -17,7 +17,7 @@ const factMin = computed(() => blocks.value.reduce((s, b) => s + (b.actualMin ??
 async function startDay() {
   startBusy.value = true;
   try {
-    await $fetch("/api/day/start", { method: "POST", body: { date: date.value } });
+    await $fetch<{ ok: boolean }>("/api/day/start", { method: "POST", body: { date: date.value } });
     await refresh();
   } finally {
     startBusy.value = false;

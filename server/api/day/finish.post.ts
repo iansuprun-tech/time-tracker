@@ -2,17 +2,19 @@ import { eq } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { days } from "../../utils/schema";
 import { ensureDay, stopRunning } from "../../utils/day";
+import { requireUserId } from "../../utils/session";
 
 export default defineEventHandler(async (event) => {
+  const userId = await requireUserId(event);
   const { date, mood, dayNote } = await readBody<{
     date: string;
     mood?: number | null;
     dayNote?: string | null;
   }>(event);
 
-  const day = await ensureDay(date);
+  const day = await ensureDay(userId, date);
   // день закрыт — таймеры идти не должны
-  await stopRunning();
+  await stopRunning(userId);
 
   await db
     .update(days)

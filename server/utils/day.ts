@@ -1,14 +1,14 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import { db, CURRENT_USER_ID } from "./db";
+import { db } from "./db";
 import { days, blocks, timeEntries, notes } from "./schema";
 
-export async function ensureDay(date: string) {
+export async function ensureDay(userId: number, date: string) {
   const [existing] = await db
     .select()
     .from(days)
-    .where(and(eq(days.userId, CURRENT_USER_ID), eq(days.date, date)));
+    .where(and(eq(days.userId, userId), eq(days.date, date)));
   if (existing) return existing;
-  const [created] = await db.insert(days).values({ userId: CURRENT_USER_ID, date }).returning();
+  const [created] = await db.insert(days).values({ userId, date }).returning();
   return created!;
 }
 
@@ -46,7 +46,7 @@ export async function getBlockNotes(dayId: number) {
 }
 
 /** Интервал, забытый с прошлых суток — его длительности доверять нельзя */
-export async function findStaleEntry() {
+export async function findStaleEntry(userId: number) {
   const [stale] = await db
     .select({ entry: timeEntries, block: blocks })
     .from(timeEntries)
@@ -55,7 +55,7 @@ export async function findStaleEntry() {
     .where(
       and(
         isNull(timeEntries.endedAt),
-        eq(days.userId, CURRENT_USER_ID),
+        eq(days.userId, userId),
         sql`${timeEntries.startedAt} < now() - interval '10 hours'`,
       ),
     );
@@ -63,13 +63,13 @@ export async function findStaleEntry() {
 }
 
 /** Останавливает все идущие таймеры пользователя, кроме указанного блока */
-export async function stopRunning(exceptBlockId?: number) {
+export async function stopRunning(userId: number, exceptBlockId?: number) {
   const running = await db
     .select({ id: timeEntries.id, blockId: timeEntries.blockId })
     .from(timeEntries)
     .innerJoin(blocks, eq(blocks.id, timeEntries.blockId))
     .innerJoin(days, eq(days.id, blocks.dayId))
-    .where(and(isNull(timeEntries.endedAt), eq(days.userId, CURRENT_USER_ID)));
+    .where(and(isNull(timeEntries.endedAt), eq(days.userId, userId)));
 
   for (const r of running) {
     if (r.blockId === exceptBlockId) continue;

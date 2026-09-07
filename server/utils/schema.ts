@@ -7,14 +7,33 @@ import {
   timestamp,
   date,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  // null = входить нельзя: так живут аккаунты, заведённые до появления входа
+  passwordHash: text("password_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Дружба взаимная: одна строка читается в обе стороны. status: pending | accepted */
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: serial("id").primaryKey(),
+    requesterId: integer("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    addresseeId: integer("addressee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("friendships_pair_idx").on(t.requesterId, t.addresseeId),
+    index("friendships_addressee_idx").on(t.addresseeId, t.status),
+  ],
+);
 
 /** status: draft | started | finished */
 export const days = pgTable(

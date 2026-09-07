@@ -1,13 +1,19 @@
 import { ensureDay, getBlocks, getBlockNotes } from "../utils/day";
 import { buildStandup } from "../utils/standup";
 import { nextDay } from "../../shared/utils/date";
+import { requireUserId } from "../utils/session";
+import { assertCanView } from "../utils/access";
 
 export default defineEventHandler(async (event) => {
-  const { date } = getQuery(event) as { date?: string };
+  const viewerId = await requireUserId(event);
+  const { date, userId } = getQuery(event) as { date?: string; userId?: string };
   if (!date) throw createError({ statusCode: 400, message: "date обязателен" });
 
-  const day = await ensureDay(date);
-  const next = await ensureDay(nextDay(date));
+  const ownerId = userId ? Number(userId) : viewerId;
+  await assertCanView(viewerId, ownerId);
+
+  const day = await ensureDay(ownerId, date);
+  const next = await ensureDay(ownerId, nextDay(date));
 
   const [blocks, notes, tomorrow] = await Promise.all([
     getBlocks(day.id),
@@ -19,7 +25,9 @@ export default defineEventHandler(async (event) => {
     text: buildStandup({
       date,
       blocks,
-      notes: notes.map((n) => ({ blockId: n.blockId, text: n.text })),
+      notes: notes
+        .filter((n) => !n.isPrivate || n.authorId === viewerId)
+        .map((n) => ({ blockId: n.blockId, text: n.text })),
       tomorrow,
     }),
   };

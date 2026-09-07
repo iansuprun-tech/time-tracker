@@ -55,7 +55,7 @@ async function copyFromToday() {
         :key="b.id"
         :block="b"
         :notes="[]"
-        :editable="false"
+        :mode="'plan'"
         @changed="refresh"
       />
     </ul>

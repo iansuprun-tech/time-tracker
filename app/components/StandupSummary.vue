@@ -1,7 +1,11 @@
 <script setup lang="ts">
-const props = defineProps<{ date: string }>();
+const props = defineProps<{ date: string; ownerId?: number }>();
 
-const { data } = await useFetch("/api/standup", { query: { date: props.date } });
+const query = computed(() => ({
+  date: props.date,
+  ...(props.ownerId ? { userId: String(props.ownerId) } : {}),
+}));
+const { data } = await useFetch("/api/standup", { query });
 const copied = ref(false);
 
 async function copy() {

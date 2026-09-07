@@ -2,13 +2,15 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { blocks } from "../../utils/schema";
 import { ensureDay } from "../../utils/day";
+import { requireUserId } from "../../utils/session";
 
 /** Перенос плана с одного дня на другой — снимает трение вечернего планирования */
 export default defineEventHandler(async (event) => {
+  const userId = await requireUserId(event);
   const { fromDate, toDate } = await readBody<{ fromDate: string; toDate: string }>(event);
 
-  const from = await ensureDay(fromDate);
-  const to = await ensureDay(toDate);
+  const from = await ensureDay(userId, fromDate);
+  const to = await ensureDay(userId, toDate);
   if (to.status !== "draft") {
     throw createError({ statusCode: 400, message: "День уже начат, план заморожен" });
   }

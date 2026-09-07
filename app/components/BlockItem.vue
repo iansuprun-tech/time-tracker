@@ -11,12 +11,30 @@ type Block = {
   runningSince: string | null;
 };
 
+type Comment = {
+  id: number;
+  targetType: string;
+  targetId: number;
+  text: string;
+  authorId: number;
+  authorName: string;
+  createdAt: string;
+};
+
 const props = defineProps<{
   block: Block;
   notes: { id: number; text: string }[];
-  editable: boolean;
+  /** edit — свой начатый день, plan — черновик плана, view — чужой день */
+  mode: "edit" | "plan" | "view";
+  comments?: Comment[];
 }>();
 const emit = defineEmits<{ changed: [] }>();
+
+const editable = computed(() => props.mode === "edit");
+const commentsOpen = ref(false);
+const commentCount = computed(
+  () => (props.comments ?? []).filter((c) => c.targetType === "block" && c.targetId === props.block.id).length,
+);
 
 const STATUSES = [
   { value: "todo", label: "к работе" },
@@ -208,13 +226,31 @@ async function saveNote() {
       </div>
 
       <button
-        v-else
+        v-else-if="mode === 'plan'"
         :disabled="busy"
         class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
         @click="remove"
       >
         ✕
       </button>
+
+      <button
+        v-else
+        class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+        @click="commentsOpen = !commentsOpen"
+      >
+        💬<span v-if="commentCount"> {{ commentCount }}</span>
+      </button>
+    </div>
+
+    <div v-if="mode === 'view' && commentsOpen" class="mt-3 border-t border-black/10 pt-3 dark:border-white/15">
+      <CommentThread
+        target-type="block"
+        :target-id="block.id"
+        :comments="comments ?? []"
+        compact
+        @added="emit('changed')"
+      />
     </div>
 
     <form v-if="noteOpen" class="mt-2 flex gap-2" @submit.prevent="saveNote">

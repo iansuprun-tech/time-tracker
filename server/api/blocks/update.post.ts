@@ -2,8 +2,11 @@ import { eq } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { blocks } from "../../utils/schema";
 import { stopRunning } from "../../utils/day";
+import { requireUserId } from "../../utils/session";
+import { assertOwnBlock } from "../../utils/access";
 
 export default defineEventHandler(async (event) => {
+  const userId = await requireUserId(event);
   const body = await readBody<{
     id: number;
     status?: string;
@@ -12,7 +15,8 @@ export default defineEventHandler(async (event) => {
     category?: string | null;
   }>(event);
 
-  if (body.status && body.status !== "doing") await stopRunning();
+  await assertOwnBlock(userId, body.id);
+  if (body.status && body.status !== "doing") await stopRunning(userId);
 
   await db
     .update(blocks)

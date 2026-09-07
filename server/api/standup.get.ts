@@ -1,4 +1,4 @@
-import { ensureDay, getBlocks, getBlockNotes } from "../utils/day";
+import { findDay, getBlocks, getBlockNotes } from "../utils/day";
 import { buildStandup } from "../utils/standup";
 import { nextDay } from "../../shared/utils/date";
 import { requireUserId } from "../utils/session";
@@ -13,13 +13,13 @@ export default defineEventHandler(async (event) => {
   const ownerId = userId ? Number(userId) : viewerId;
   await assertCanView(viewerId, ownerId);
 
-  const day = await ensureDay(ownerId, date);
-  const next = await ensureDay(ownerId, nextDay(date));
+  const day = await findDay(ownerId, date);
+  const next = await findDay(ownerId, nextDay(date));
 
   const [blocks, notes, tomorrow] = await Promise.all([
-    getBlocks(day.id),
-    getBlockNotes(day.id),
-    getBlocks(next.id),
+    day ? getBlocks(day.id) : Promise.resolve([]),
+    day ? getBlockNotes(day.id) : Promise.resolve([]),
+    next ? getBlocks(next.id) : Promise.resolve([]),
   ]);
 
   return {

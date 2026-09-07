@@ -12,7 +12,8 @@ import { fail } from "../utils/http";
 export default defineEventHandler(async (event) => {
   const viewerId = await requireUserId(event);
   const { dayId, blockIds } = getQuery(event) as { dayId?: string; blockIds?: string };
-  if (!dayId) throw fail(400, "dayId обязателен");
+  // dayId = 0 — день ещё не создан, обсуждать нечего
+  if (!dayId || Number(dayId) === 0) return [];
 
   await assertCanComment(viewerId, "day", Number(dayId));
 

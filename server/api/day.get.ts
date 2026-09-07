@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../utils/db";
 import { users } from "../utils/schema";
-import { ensureDay, getBlocks, getBlockNotes, findStaleEntry } from "../utils/day";
+import { findDay, blankDay, getBlocks, getBlockNotes, findStaleEntry } from "../utils/day";
 import { requireUserId } from "../utils/session";
 import { assertCanView } from "../utils/access";
 import { fail } from "../utils/http";
@@ -15,10 +15,10 @@ export default defineEventHandler(async (event) => {
   await assertCanView(viewerId, ownerId);
   const readonly = ownerId !== viewerId;
 
-  const day = await ensureDay(ownerId, date);
+  const day = (await findDay(ownerId, date)) ?? blankDay(ownerId, date);
   const [blocks, notes, stale, owner] = await Promise.all([
-    getBlocks(day.id),
-    getBlockNotes(day.id),
+    day.id ? getBlocks(day.id) : Promise.resolve([]),
+    day.id ? getBlockNotes(day.id) : Promise.resolve([]),
     // чужой забытый таймер закрывать не нам
     readonly ? Promise.resolve(null) : findStaleEntry(ownerId),
     db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, ownerId)),

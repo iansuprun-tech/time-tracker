@@ -1,7 +1,31 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
-import { days, blocks, timeEntries, notes } from "./schema";
+import { days, blocks, timeEntries, notes, comments } from "./schema";
 
+/** Только чтение: просмотр даты не должен плодить пустые дни в базе */
+export async function findDay(userId: number, date: string) {
+  const [row] = await db
+    .select()
+    .from(days)
+    .where(and(eq(days.userId, userId), eq(days.date, date)));
+  return row ?? null;
+}
+
+/** Пустая заготовка для дня, которого ещё нет: экран рисуется, строка не создаётся */
+export function blankDay(userId: number, date: string) {
+  return {
+    id: 0,
+    userId,
+    date,
+    status: "draft" as const,
+    startedAt: null,
+    finishedAt: null,
+    mood: null,
+    dayNote: null,
+  };
+}
+
+/** Создаёт день — только там, где действительно что-то пишем */
 export async function ensureDay(userId: number, date: string) {
   const [existing] = await db
     .select()
@@ -79,4 +103,27 @@ export async function stopRunning(userId: number, exceptBlockId?: number) {
       .set({ status: sql`case when ${blocks.status} = 'doing' then 'todo' else ${blocks.status} end` })
       .where(eq(blocks.id, r.blockId));
   }
+}
+
+/**
+ * День, в котором ничего не осталось, хранить незачем.
+ * Вызывается после удаления блока, чтобы база не копила пустые заготовки.
+ */
+export async function dropDayIfEmpty(dayId: number) {
+  const [day] = await db.select().from(days).where(eq(days.id, dayId));
+  if (!day || day.status !== "draft" || day.mood !== null || day.dayNote !== null) return;
+
+  const [blockAgg] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(blocks)
+    .where(eq(blocks.dayId, dayId));
+  if (Number(blockAgg?.count ?? 0) > 0) return;
+
+  const [commentAgg] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(comments)
+    .where(and(eq(comments.targetType, "day"), eq(comments.targetId, dayId)));
+  if (Number(commentAgg?.count ?? 0) > 0) return;
+
+  await db.delete(days).where(eq(days.id, dayId));
 }

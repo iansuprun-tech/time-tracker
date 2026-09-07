@@ -1,7 +1,7 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { blocks } from "../../utils/schema";
-import { ensureDay } from "../../utils/day";
+import { ensureDay, findDay } from "../../utils/day";
 import { requireUserId } from "../../utils/session";
 import { fail } from "../../utils/http";
 
@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
   const userId = await requireUserId(event);
   const { fromDate, toDate } = await readBody<{ fromDate: string; toDate: string }>(event);
 
-  const from = await ensureDay(userId, fromDate);
+  const from = await findDay(userId, fromDate);
+  if (!from) return { copied: 0 };
   const to = await ensureDay(userId, toDate);
   if (to.status !== "draft") {
     throw fail(400, "День уже начат, план заморожен");

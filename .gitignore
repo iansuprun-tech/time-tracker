@@ -18,3 +18,5 @@ dist
 
 # логи
 *.log
+.vercel
+.env*

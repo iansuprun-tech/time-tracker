@@ -104,3 +104,14 @@ export const comments = pgTable(
   },
   (t) => [index("comments_target_idx").on(t.targetType, t.targetId)],
 );
+
+/** Приглашение по ссылке: одноразовое, со сроком жизни */
+export const invites = pgTable("invites", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  inviterId: integer("inviter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedById: integer("used_by_id").references(() => users.id, { onDelete: "set null" }),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+});

@@ -31,6 +31,27 @@ async function request() {
   }
 }
 
+const inviteUrl = ref("");
+const inviteCopied = ref(false);
+
+async function createInvite() {
+  const res = await $fetch<{ token: string }>("/api/invites/create", { method: "POST" });
+  inviteUrl.value = `${window.location.origin}/invite-${res.token}`;
+  inviteCopied.value = false;
+  await copyInvite();
+}
+
+async function copyInvite() {
+  try {
+    await navigator.clipboard.writeText(inviteUrl.value);
+    inviteCopied.value = true;
+    setTimeout(() => (inviteCopied.value = false), 2000);
+  } catch {
+    // буфер недоступен — ссылка остаётся на экране, её можно выделить руками
+    inviteCopied.value = false;
+  }
+}
+
 const respond = (id: number, accept: boolean) =>
   call(() => $fetch<{ ok: boolean }>("/api/friends/respond", { method: "POST", body: { id, accept } }));
 const remove = (id: number) =>
@@ -41,6 +62,39 @@ const remove = (id: number) =>
   <main class="mx-auto max-w-2xl px-4 py-6 sm:py-8">
     <h1 class="mb-6 text-xl font-semibold">Друзья</h1>
 
+    <section class="mb-6 rounded-lg border border-black/10 p-4 dark:border-white/15">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-medium">Пригласить по ссылке</h2>
+          <p class="text-xs text-black/50 dark:text-white/50">
+            Одноразовая, живёт 7 дней. Регистрироваться заранее не нужно.
+          </p>
+        </div>
+        <button
+          class="shrink-0 rounded bg-emerald-600 px-3 py-2 text-sm text-white"
+          @click="createInvite"
+        >
+          Создать
+        </button>
+      </div>
+
+      <div v-if="inviteUrl" class="mt-3 flex gap-2">
+        <input
+          :value="inviteUrl"
+          readonly
+          class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+          @focus="($event.target as HTMLInputElement).select()"
+        />
+        <button
+          class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+          @click="copyInvite"
+        >
+          {{ inviteCopied ? "скопировано" : "копировать" }}
+        </button>
+      </div>
+    </section>
+
+    <h2 class="mb-2 text-sm font-medium">Добавить по почте</h2>
     <form class="mb-2 flex gap-2" @submit.prevent="request">
       <input
         v-model="email"

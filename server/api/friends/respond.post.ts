@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { friendships } from "../../utils/schema";
 import { requireUserId } from "../../utils/session";
+import { fail } from "../../utils/http";
 
 /** Отвечать на заявку может только её адресат */
 export default defineEventHandler(async (event) => {
@@ -12,7 +13,7 @@ export default defineEventHandler(async (event) => {
     .select()
     .from(friendships)
     .where(and(eq(friendships.id, id), eq(friendships.addresseeId, userId)));
-  if (!row) throw createError({ statusCode: 404, message: "Заявка не найдена" });
+  if (!row) throw fail(404, "Заявка не найдена");
 
   if (accept) await db.update(friendships).set({ status: "accepted" }).where(eq(friendships.id, id));
   else await db.delete(friendships).where(eq(friendships.id, id));

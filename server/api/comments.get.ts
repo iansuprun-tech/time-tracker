@@ -3,6 +3,7 @@ import { db } from "../utils/db";
 import { comments, users } from "../utils/schema";
 import { requireUserId } from "../utils/session";
 import { assertCanComment } from "../utils/comments";
+import { fail } from "../utils/http";
 
 /**
  * Комментарии дня целиком: сам день плюс все его блоки.
@@ -11,7 +12,7 @@ import { assertCanComment } from "../utils/comments";
 export default defineEventHandler(async (event) => {
   const viewerId = await requireUserId(event);
   const { dayId, blockIds } = getQuery(event) as { dayId?: string; blockIds?: string };
-  if (!dayId) throw createError({ statusCode: 400, message: "dayId обязателен" });
+  if (!dayId) throw fail(400, "dayId обязателен");
 
   await assertCanComment(viewerId, "day", Number(dayId));
 

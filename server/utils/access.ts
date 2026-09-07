@@ -1,6 +1,7 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "./db";
 import { blocks, days, friendships } from "./schema";
+import { fail } from "./http";
 
 /**
  * Кто владелец блока. Эндпоинты принимают id блока снаружи,
@@ -13,8 +14,8 @@ export async function assertOwnBlock(userId: number, blockId: number) {
     .innerJoin(days, eq(days.id, blocks.dayId))
     .where(eq(blocks.id, blockId));
 
-  if (!row) throw createError({ statusCode: 404, message: "Блок не найден" });
-  if (row.ownerId !== userId) throw createError({ statusCode: 403, message: "Чужой блок" });
+  if (!row) throw fail(404, "Блок не найден");
+  if (row.ownerId !== userId) throw fail(403, "Чужой блок");
   return row.ownerId;
 }
 
@@ -41,6 +42,6 @@ export async function canView(viewerId: number, ownerId: number) {
 
 export async function assertCanView(viewerId: number, ownerId: number) {
   if (!(await canView(viewerId, ownerId))) {
-    throw createError({ statusCode: 403, message: "Нет доступа к этому дню" });
+    throw fail(403, "Нет доступа к этому дню");
   }
 }

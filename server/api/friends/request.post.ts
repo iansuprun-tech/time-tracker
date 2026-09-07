@@ -2,6 +2,7 @@ import { and, eq, or } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { friendships, users } from "../../utils/schema";
 import { requireUserId } from "../../utils/session";
+import { fail } from "../../utils/http";
 
 export default defineEventHandler(async (event) => {
   const userId = await requireUserId(event);
@@ -9,8 +10,8 @@ export default defineEventHandler(async (event) => {
   const target = (email ?? "").trim().toLowerCase();
 
   const [other] = await db.select({ id: users.id }).from(users).where(eq(users.email, target));
-  if (!other) throw createError({ statusCode: 404, message: "Такого пользователя нет" });
-  if (other.id === userId) throw createError({ statusCode: 400, message: "Это вы" });
+  if (!other) throw fail(404, "Такого пользователя нет");
+  if (other.id === userId) throw fail(400, "Это вы");
 
   const [existing] = await db
     .select({ id: friendships.id, status: friendships.status, requesterId: friendships.requesterId })

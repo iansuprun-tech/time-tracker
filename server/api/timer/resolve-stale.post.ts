@@ -3,6 +3,7 @@ import { db } from "../../utils/db";
 import { blocks, timeEntries } from "../../utils/schema";
 import { requireUserId } from "../../utils/session";
 import { assertOwnBlock } from "../../utils/access";
+import { fail } from "../../utils/http";
 
 /** Забытый таймер закрываем указанным числом минут, а не реальной длительностью */
 export default defineEventHandler(async (event) => {
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const { entryId, minutes } = await readBody<{ entryId: number; minutes: number }>(event);
 
   const [entry] = await db.select().from(timeEntries).where(eq(timeEntries.id, entryId));
-  if (!entry) throw createError({ statusCode: 404, message: "Интервал не найден" });
+  if (!entry) throw fail(404, "Интервал не найден");
   await assertOwnBlock(userId, entry.blockId);
 
   const ended = new Date(entry.startedAt.getTime() + minutes * 60_000);

@@ -3,6 +3,7 @@ import { db } from "../../utils/db";
 import { blocks } from "../../utils/schema";
 import { ensureDay } from "../../utils/day";
 import { requireUserId } from "../../utils/session";
+import { fail } from "../../utils/http";
 
 export default defineEventHandler(async (event) => {
   const userId = await requireUserId(event);
@@ -13,7 +14,7 @@ export default defineEventHandler(async (event) => {
     category?: string | null;
   }>(event);
   const title = (body.title ?? "").trim();
-  if (!title) throw createError({ statusCode: 400, message: "Пустой блок" });
+  if (!title) throw fail(400, "Пустой блок");
 
   const day = await ensureDay(userId, body.date);
   const [agg] = await db

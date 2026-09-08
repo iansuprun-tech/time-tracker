@@ -65,8 +65,12 @@ async function post(url: "/api/day/start" | "/api/day/reopen") {
   }
 }
 
-async function reload() {
-  await Promise.all([refresh(), refreshComments()]);
+/**
+ * Старт таймера комментарии не меняет, а лишний заход стоит целого round-trip
+ * до базы — поэтому обновляем ровно то, что могло поехать.
+ */
+async function reload(part: "day" | "comments" = "day") {
+  await (part === "comments" ? refreshComments() : refresh());
 }
 </script>
 
@@ -134,7 +138,7 @@ async function reload() {
         :notes="notesFor(b.id)"
         :mode="blockMode"
         :comments="comments ?? []"
-        @changed="reload"
+        :reload="reload"
       />
     </ul>
 
@@ -146,7 +150,7 @@ async function reload() {
       <AddBlock
         :date="date"
         :hint="started ? 'новая задача (пойдёт как вне плана)' : 'блок дня'"
-        @added="reload"
+        @added="reload()"
       />
     </div>
 
@@ -155,7 +159,7 @@ async function reload() {
         :date="date"
         :mood="data?.day.mood ?? null"
         :day-note="data?.day.dayNote ?? null"
-        @finished="reload"
+        @finished="reload()"
       />
     </div>
 

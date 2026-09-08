@@ -56,7 +56,7 @@ async function copyFromToday() {
         :block="b"
         :notes="[]"
         :mode="'plan'"
-        @changed="refresh"
+        :reload="async () => { await refresh(); }"
       />
     </ul>
 

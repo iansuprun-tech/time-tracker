@@ -27,8 +27,9 @@ const props = defineProps<{
   /** edit — свой начатый день, plan — черновик плана, view — чужой день */
   mode: "edit" | "plan" | "view";
   comments?: Comment[];
+  /** обновление данных дня; ждём его, иначе кнопка оживает раньше, чем приедет ответ */
+  reload: (part?: "day" | "comments") => Promise<void>;
 }>();
-const emit = defineEmits<{ changed: [] }>();
 
 const editable = computed(() => props.mode === "edit");
 const commentsOpen = ref(false);
@@ -52,7 +53,12 @@ const busy = ref(false);
 
 const { chime, unlock } = useSoundSettings();
 
-const running = computed(() => Boolean(props.block.runningSince));
+// пока запрос в пути, кнопка показывает желаемое состояние: до базы далеко,
+// и без этого клик выглядит непрошедшим
+const pendingRunning = ref<boolean | null>(null);
+const running = computed(() => pendingRunning.value ?? Boolean(props.block.runningSince));
+/** настоящее состояние: часам нужна точка отсчёта с сервера, желаемого им мало */
+const ticking = computed(() => Boolean(props.block.runningSince));
 const fact = computed(() => props.block.actualMin ?? props.block.trackedMin);
 const over = computed(
   () =>
@@ -66,9 +72,10 @@ async function call(fn: () => Promise<unknown>) {
   busy.value = true;
   try {
     await fn();
-    emit("changed");
+    await props.reload();
   } finally {
     busy.value = false;
+    pendingRunning.value = null;
   }
 }
 
@@ -83,15 +90,22 @@ const patch = (body: BlockPatch) =>
   );
 
 function startTimer() {
+  if (busy.value) return;
   // клик — единственный момент, когда браузер разрешает открыть звук;
   // после него вехи таймера звучат уже без участия пользователя
   unlock();
   chime("start");
+  pendingRunning.value = true;
   return call(() =>
     $fetch<{ ok: boolean }>("/api/timer/start", { method: "POST", body: { blockId: props.block.id } }),
   );
 }
-const stopTimer = () => call(() => $fetch<{ ok: boolean }>("/api/timer/stop", { method: "POST" }));
+
+function stopTimer() {
+  if (busy.value) return;
+  pendingRunning.value = false;
+  return call(() => $fetch<{ ok: boolean }>("/api/timer/stop", { method: "POST" }));
+}
 const toggleDone = () => patch({ status: props.block.status === "done" ? "todo" : "done" });
 const remove = () =>
   call(() => $fetch<{ ok: boolean }>("/api/blocks/delete", { method: "POST", body: { id: props.block.id } }));
@@ -159,7 +173,7 @@ async function saveNote() {
           <span v-if="block.plannedMin != null">план {{ block.plannedMin }}м</span>
 
           <ElapsedTimer
-            v-if="running"
+            v-if="ticking"
             :since="block.runningSince!"
             :base-min="block.trackedMin"
             :planned-min="block.plannedMin"
@@ -264,7 +278,7 @@ async function saveNote() {
         :target-id="block.id"
         :comments="comments ?? []"
         compact
-        @added="emit('changed')"
+        @added="reload('comments')"
       />
     </div>
 

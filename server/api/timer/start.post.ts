@@ -8,15 +8,24 @@ import { assertOwnBlock } from "../../utils/access";
 export default defineEventHandler(async (event) => {
   const userId = await requireUserId(event);
   const { blockId } = await readBody<{ blockId: number }>(event);
-  await assertOwnBlock(userId, blockId);
 
-  await stopRunning(userId, blockId);
-  const [already] = await db
-    .select()
-    .from(timeEntries)
-    .where(and(eq(timeEntries.blockId, blockId), isNull(timeEntries.endedAt)));
-  if (!already) await db.insert(timeEntries).values({ blockId });
+  // проверка владельца идёт до любой записи: Promise.all отвалится целиком,
+  // если блок чужой, а параллельный запрос рядом с ней — только чтение
+  const [, already] = await Promise.all([
+    assertOwnBlock(userId, blockId),
+    db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(and(eq(timeEntries.blockId, blockId), isNull(timeEntries.endedAt))),
+  ]);
 
-  await db.update(blocks).set({ status: "doing" }).where(eq(blocks.id, blockId));
+  // три записи в разные строки, зависимостей между ними нет —
+  // держать их в цепочке значит трижды сходить до базы вместо одного раза
+  await Promise.all([
+    stopRunning(userId, blockId),
+    already.length ? Promise.resolve() : db.insert(timeEntries).values({ blockId }),
+    db.update(blocks).set({ status: "doing" }).where(eq(blocks.id, blockId)),
+  ]);
+
   return { ok: true };
 });

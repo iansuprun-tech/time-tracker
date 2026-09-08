@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "./db";
 import { days, blocks, timeEntries, notes, comments } from "./schema";
 
@@ -60,12 +60,17 @@ export async function getBlocks(dayId: number) {
 export type BlockDto = Awaited<ReturnType<typeof getBlocks>>[number];
 
 export async function getBlockNotes(dayId: number) {
-  const ids = await db.select({ id: blocks.id }).from(blocks).where(eq(blocks.dayId, dayId));
-  if (ids.length === 0) return [];
   return db
-    .select()
+    .select({
+      id: notes.id,
+      blockId: notes.blockId,
+      text: notes.text,
+      isPrivate: notes.isPrivate,
+      authorId: notes.authorId,
+    })
     .from(notes)
-    .where(sql`${notes.blockId} in (${sql.join(ids.map((b) => sql`${b.id}`), sql`, `)})`)
+    .innerJoin(blocks, eq(blocks.id, notes.blockId))
+    .where(eq(blocks.dayId, dayId))
     .orderBy(asc(notes.createdAt));
 }
 
@@ -86,23 +91,35 @@ export async function findStaleEntry(userId: number) {
   return stale ?? null;
 }
 
-/** Останавливает все идущие таймеры пользователя, кроме указанного блока */
+/**
+ * Останавливает все идущие таймеры пользователя, кроме указанного блока.
+ * Одним UPDATE, а не выборкой и парой UPDATE на каждую строку: до базы далеко,
+ * и на клике «Старт» цена лишнего захода видна глазом.
+ */
 export async function stopRunning(userId: number, exceptBlockId?: number) {
-  const running = await db
-    .select({ id: timeEntries.id, blockId: timeEntries.blockId })
-    .from(timeEntries)
-    .innerJoin(blocks, eq(blocks.id, timeEntries.blockId))
-    .innerJoin(days, eq(days.id, blocks.dayId))
-    .where(and(isNull(timeEntries.endedAt), eq(days.userId, userId)));
+  const stopped = await db
+    .update(timeEntries)
+    .set({ endedAt: new Date() })
+    .where(
+      and(
+        isNull(timeEntries.endedAt),
+        exceptBlockId ? ne(timeEntries.blockId, exceptBlockId) : undefined,
+        // таймер чужого блока трогать нельзя даже своими руками
+        sql`${timeEntries.blockId} in (
+          select ${blocks.id} from ${blocks}
+          join ${days} on ${days.id} = ${blocks.dayId}
+          where ${days.userId} = ${userId}
+        )`,
+      ),
+    )
+    .returning({ blockId: timeEntries.blockId });
 
-  for (const r of running) {
-    if (r.blockId === exceptBlockId) continue;
-    await db.update(timeEntries).set({ endedAt: new Date() }).where(eq(timeEntries.id, r.id));
-    await db
-      .update(blocks)
-      .set({ status: sql`case when ${blocks.status} = 'doing' then 'todo' else ${blocks.status} end` })
-      .where(eq(blocks.id, r.blockId));
-  }
+  if (!stopped.length) return;
+
+  await db
+    .update(blocks)
+    .set({ status: sql`case when ${blocks.status} = 'doing' then 'todo' else ${blocks.status} end` })
+    .where(inArray(blocks.id, stopped.map((r) => r.blockId)));
 }
 
 /**

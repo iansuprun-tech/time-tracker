@@ -50,6 +50,8 @@ const factOpen = ref(false);
 const factValue = ref(0);
 const busy = ref(false);
 
+const { chime, unlock } = useSoundSettings();
+
 const running = computed(() => Boolean(props.block.runningSince));
 const fact = computed(() => props.block.actualMin ?? props.block.trackedMin);
 const over = computed(
@@ -80,8 +82,15 @@ const patch = (body: BlockPatch) =>
     }),
   );
 
-const startTimer = () =>
-  call(() => $fetch<{ ok: boolean }>("/api/timer/start", { method: "POST", body: { blockId: props.block.id } }));
+function startTimer() {
+  // клик — единственный момент, когда браузер разрешает открыть звук;
+  // после него вехи таймера звучат уже без участия пользователя
+  unlock();
+  chime("start");
+  return call(() =>
+    $fetch<{ ok: boolean }>("/api/timer/start", { method: "POST", body: { blockId: props.block.id } }),
+  );
+}
 const stopTimer = () => call(() => $fetch<{ ok: boolean }>("/api/timer/stop", { method: "POST" }));
 const toggleDone = () => patch({ status: props.block.status === "done" ? "todo" : "done" });
 const remove = () =>
@@ -149,7 +158,13 @@ async function saveNote() {
         <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
           <span v-if="block.plannedMin != null">план {{ block.plannedMin }}м</span>
 
-          <ElapsedTimer v-if="running" :since="block.runningSince!" :base-min="block.trackedMin" />
+          <ElapsedTimer
+            v-if="running"
+            :since="block.runningSince!"
+            :base-min="block.trackedMin"
+            :planned-min="block.plannedMin"
+            :chime="editable"
+          />
 
           <form v-else-if="factOpen" class="flex items-center gap-1" @submit.prevent="saveFact">
             <input

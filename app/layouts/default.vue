@@ -17,6 +17,7 @@ async function logout() {
         <NuxtLink to="/" class="font-medium">Мой день</NuxtLink>
         <NuxtLink to="/tomorrow" class="text-black/60 dark:text-white/60">Завтра</NuxtLink>
         <NuxtLink to="/friends" class="text-black/60 dark:text-white/60">Друзья</NuxtLink>
+        <NuxtLink to="/settings" class="text-black/60 dark:text-white/60">Звуки</NuxtLink>
         <span class="ml-auto text-black/40 dark:text-white/40">{{ user?.name }}</span>
         <button class="text-black/60 underline underline-offset-4 dark:text-white/60" @click="logout">
           выйти

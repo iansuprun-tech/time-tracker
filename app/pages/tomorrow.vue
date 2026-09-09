@@ -8,6 +8,13 @@ const { data: todayData } = await useFetch("/api/day", { query: { date: today } 
 const blocks = computed(() => data.value?.blocks ?? []);
 const plannedMin = computed(() => blocks.value.reduce((s, b) => s + (b.plannedMin ?? 0), 0));
 
+async function saveOrder(ids: number[]) {
+  await $fetch<{ ok: boolean }>("/api/blocks/reorder", { method: "POST", body: { ids } });
+  await refresh();
+}
+
+const { items: ordered, draggingId, start: grab } = useDragSort(() => blocks.value, saveOrder);
+
 // копировать есть что, только если сегодня был план и завтра ещё пусто
 const canCopy = computed(
   () => blocks.value.length === 0 && (todayData.value?.blocks.length ?? 0) > 0,
@@ -51,12 +58,15 @@ async function copyFromToday() {
 
     <ul class="space-y-2">
       <BlockItem
-        v-for="b in blocks"
+        v-for="b in ordered"
         :key="b.id"
         :block="b"
         :notes="[]"
         :mode="'plan'"
         :reload="async () => { await refresh(); }"
+        :reorderable="blocks.length > 1"
+        :dragging="draggingId === b.id"
+        @grab="grab(b.id, $event)"
       />
     </ul>
 

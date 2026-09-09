@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "./db";
 import { blocks, days, friendships } from "./schema";
 import { fail } from "./http";
@@ -17,6 +17,25 @@ export async function assertOwnBlock(userId: number, blockId: number) {
   if (!row) throw fail(404, "Блок не найден");
   if (row.ownerId !== userId) throw fail(403, "Чужой блок");
   return row.ownerId;
+}
+
+/**
+ * Пачка блоков разом: все свои и все из одного дня —
+ * иначе это не перестановка внутри списка, а что-то другое.
+ */
+export async function assertOwnBlocks(userId: number, blockIds: number[]) {
+  const rows = await db
+    .select({ dayId: blocks.dayId, ownerId: days.userId })
+    .from(blocks)
+    .innerJoin(days, eq(days.id, blocks.dayId))
+    .where(inArray(blocks.id, blockIds));
+
+  if (rows.length !== blockIds.length) throw fail(404, "Блок не найден");
+  if (rows.some((r) => r.ownerId !== userId)) throw fail(403, "Чужой блок");
+
+  const dayId = rows[0]!.dayId;
+  if (rows.some((r) => r.dayId !== dayId)) throw fail(400, "Блоки из разных дней");
+  return dayId;
 }
 
 export async function areFriends(a: number, b: number) {

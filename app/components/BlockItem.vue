@@ -29,7 +29,13 @@ const props = defineProps<{
   comments?: Comment[];
   /** обновление данных дня; ждём его, иначе кнопка оживает раньше, чем приедет ответ */
   reload: (part?: "day" | "comments") => Promise<void>;
+  /** блок можно тащить за ручку, меняя порядок в списке */
+  reorderable?: boolean;
+  /** этот блок сейчас едет под рукой */
+  dragging?: boolean;
 }>();
+
+const emit = defineEmits<{ grab: [event: PointerEvent] }>();
 
 const editable = computed(() => props.mode === "edit");
 const commentsOpen = ref(false);
@@ -138,158 +144,174 @@ async function saveNote() {
 
 <template>
   <li
+    :data-block-id="block.id"
     class="rounded-lg border p-3"
     :class="[
       running
         ? 'border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20'
         : 'border-black/10 dark:border-white/15',
       block.status === 'done' || block.status === 'dropped' ? 'opacity-60' : '',
+      dragging ? 'opacity-70 ring-2 ring-emerald-500/50' : '',
     ]"
   >
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+    <div class="flex items-start gap-2">
+      <button
+        v-if="reorderable"
+        type="button"
+        aria-label="Перетащить блок"
+        class="-ml-1 shrink-0 cursor-grab touch-none select-none px-1 py-0.5 text-black/25 hover:text-black/50 active:cursor-grabbing dark:text-white/25 dark:hover:text-white/50"
+        @pointerdown="emit('grab', $event)"
+      >
+        ⠿
+      </button>
+
       <div class="min-w-0 flex-1">
-        <div class="flex flex-wrap items-center gap-2">
-          <span :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''">
-            {{ block.title }}
-          </span>
-          <span
-            v-if="block.category"
-            class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
-          >
-            {{ block.category }}
-          </span>
-          <span
-            v-if="block.isUnplanned"
-            class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
-          >
-            вне плана
-          </span>
-          <span v-if="block.status === 'blocked'" class="text-[11px] text-red-600 dark:text-red-400">
-            блокер
-          </span>
-        </div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''">
+                {{ block.title }}
+              </span>
+              <span
+                v-if="block.category"
+                class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
+              >
+                {{ block.category }}
+              </span>
+              <span
+                v-if="block.isUnplanned"
+                class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
+              >
+                вне плана
+              </span>
+              <span v-if="block.status === 'blocked'" class="text-[11px] text-red-600 dark:text-red-400">
+                блокер
+              </span>
+            </div>
 
-        <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
-          <span v-if="block.plannedMin != null">план {{ block.plannedMin }}м</span>
+            <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
+              <span v-if="block.plannedMin != null">план {{ block.plannedMin }}м</span>
 
-          <ElapsedTimer
-            v-if="ticking"
-            :since="block.runningSince!"
-            :base-min="block.trackedMin"
-            :planned-min="block.plannedMin"
-            :chime="editable"
-          />
+              <ElapsedTimer
+                v-if="ticking"
+                :since="block.runningSince!"
+                :base-min="block.trackedMin"
+                :planned-min="block.plannedMin"
+                :chime="editable"
+              />
 
-          <form v-else-if="factOpen" class="flex items-center gap-1" @submit.prevent="saveFact">
-            <input
-              v-model.number="factValue"
-              type="number"
-              min="0"
-              step="5"
-              autofocus
-              class="w-16 rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
-            />
-            <button class="rounded border border-black/15 px-1.5 py-0.5 dark:border-white/20">ок</button>
-            <button
-              v-if="block.actualMin != null"
-              type="button"
-              class="text-black/40 dark:text-white/40"
-              @click="resetFact"
+              <form v-else-if="factOpen" class="flex items-center gap-1" @submit.prevent="saveFact">
+                <input
+                  v-model.number="factValue"
+                  type="number"
+                  min="0"
+                  step="5"
+                  autofocus
+                  class="w-16 rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                />
+                <button class="rounded border border-black/15 px-1.5 py-0.5 dark:border-white/20">ок</button>
+                <button
+                  v-if="block.actualMin != null"
+                  type="button"
+                  class="text-black/40 dark:text-white/40"
+                  @click="resetFact"
+                >
+                  сброс
+                </button>
+              </form>
+
+              <button
+                v-else-if="editable"
+                class="underline decoration-dotted underline-offset-2"
+                :class="over ? 'text-red-600 dark:text-red-400' : ''"
+                @click="openFact"
+              >
+                факт {{ fact }}м<span v-if="block.actualMin != null">*</span>
+              </button>
+
+              <span v-else-if="fact > 0">факт {{ fact }}м</span>
+
+              <select
+                v-if="editable"
+                :value="block.status"
+                class="rounded border border-black/10 bg-transparent px-1 py-0.5 dark:border-white/15"
+                @change="patch({ status: ($event.target as HTMLSelectElement).value })"
+              >
+                <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
+              </select>
+            </div>
+
+            <ul
+              v-if="notes.length"
+              class="mt-2 space-y-1 border-l-2 border-black/10 pl-2 text-xs text-black/65 dark:border-white/15 dark:text-white/65"
             >
-              сброс
+              <li v-for="n in notes" :key="n.id">{{ n.text }}</li>
+            </ul>
+          </div>
+
+          <div v-if="editable" class="flex shrink-0 items-center gap-1 self-start">
+            <button
+              v-if="block.status !== 'done'"
+              :disabled="busy"
+              class="min-w-14 rounded px-2 py-2 text-xs sm:py-1"
+              :class="running ? 'border border-black/15 dark:border-white/20' : 'bg-emerald-600 text-white'"
+              @click="running ? stopTimer() : startTimer()"
+            >
+              {{ running ? "Стоп" : "Старт" }}
             </button>
-          </form>
+            <button
+              :disabled="busy"
+              class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
+              @click="toggleDone"
+            >
+              {{ block.status === "done" ? "↺" : "✓" }}
+            </button>
+            <button
+              class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
+              @click="noteOpen = !noteOpen"
+            >
+              +заметка
+            </button>
+          </div>
 
           <button
-            v-else-if="editable"
-            class="underline decoration-dotted underline-offset-2"
-            :class="over ? 'text-red-600 dark:text-red-400' : ''"
-            @click="openFact"
+            v-else-if="mode === 'plan'"
+            :disabled="busy"
+            class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+            @click="remove"
           >
-            факт {{ fact }}м<span v-if="block.actualMin != null">*</span>
+            ✕
           </button>
 
-          <span v-else-if="fact > 0">факт {{ fact }}м</span>
-
-          <select
-            v-if="editable"
-            :value="block.status"
-            class="rounded border border-black/10 bg-transparent px-1 py-0.5 dark:border-white/15"
-            @change="patch({ status: ($event.target as HTMLSelectElement).value })"
+          <button
+            v-else
+            class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+            @click="commentsOpen = !commentsOpen"
           >
-            <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
-          </select>
+            💬<span v-if="commentCount"> {{ commentCount }}</span>
+          </button>
         </div>
 
-        <ul
-          v-if="notes.length"
-          class="mt-2 space-y-1 border-l-2 border-black/10 pl-2 text-xs text-black/65 dark:border-white/15 dark:text-white/65"
-        >
-          <li v-for="n in notes" :key="n.id">{{ n.text }}</li>
-        </ul>
+        <div v-if="mode === 'view' && commentsOpen" class="mt-3 border-t border-black/10 pt-3 dark:border-white/15">
+          <CommentThread
+            target-type="block"
+            :target-id="block.id"
+            :comments="comments ?? []"
+            compact
+            @added="reload('comments')"
+          />
+        </div>
+
+        <form v-if="noteOpen" class="mt-2 flex gap-2" @submit.prevent="saveNote">
+          <input
+            v-model="noteText"
+            autofocus
+            placeholder="что происходит по этому блоку"
+            class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+          />
+          <button class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20">ок</button>
+        </form>
       </div>
-
-      <div v-if="editable" class="flex shrink-0 items-center gap-1 self-start">
-        <button
-          v-if="block.status !== 'done'"
-          :disabled="busy"
-          class="min-w-14 rounded px-2 py-2 text-xs sm:py-1"
-          :class="running ? 'border border-black/15 dark:border-white/20' : 'bg-emerald-600 text-white'"
-          @click="running ? stopTimer() : startTimer()"
-        >
-          {{ running ? "Стоп" : "Старт" }}
-        </button>
-        <button
-          :disabled="busy"
-          class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
-          @click="toggleDone"
-        >
-          {{ block.status === "done" ? "↺" : "✓" }}
-        </button>
-        <button
-          class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
-          @click="noteOpen = !noteOpen"
-        >
-          +заметка
-        </button>
-      </div>
-
-      <button
-        v-else-if="mode === 'plan'"
-        :disabled="busy"
-        class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
-        @click="remove"
-      >
-        ✕
-      </button>
-
-      <button
-        v-else
-        class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
-        @click="commentsOpen = !commentsOpen"
-      >
-        💬<span v-if="commentCount"> {{ commentCount }}</span>
-      </button>
     </div>
-
-    <div v-if="mode === 'view' && commentsOpen" class="mt-3 border-t border-black/10 pt-3 dark:border-white/15">
-      <CommentThread
-        target-type="block"
-        :target-id="block.id"
-        :comments="comments ?? []"
-        compact
-        @added="reload('comments')"
-      />
-    </div>
-
-    <form v-if="noteOpen" class="mt-2 flex gap-2" @submit.prevent="saveNote">
-      <input
-        v-model="noteText"
-        autofocus
-        placeholder="что происходит по этому блоку"
-        class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
-      />
-      <button class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20">ок</button>
-    </form>
   </li>
 </template>

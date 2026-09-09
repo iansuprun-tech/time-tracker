@@ -23,6 +23,16 @@ const started = computed(() => status.value === "started");
 const finished = computed(() => status.value === "finished");
 const busy = ref(false);
 
+/** порядок блоков можно менять на своём дне — и в плане, и по ходу дня */
+const reorderable = computed(() => !readonly.value && blocks.value.length > 1);
+
+async function saveOrder(ids: number[]) {
+  await $fetch<{ ok: boolean }>("/api/blocks/reorder", { method: "POST", body: { ids } });
+  await refresh();
+}
+
+const { items: ordered, draggingId, start: grab } = useDragSort(() => blocks.value, saveOrder);
+
 const blockMode = computed<"edit" | "plan" | "view">(() => {
   if (readonly.value) return "view";
   return started.value ? "edit" : "plan";
@@ -132,13 +142,16 @@ async function reload(part: "day" | "comments" = "day") {
 
     <ul class="space-y-2">
       <BlockItem
-        v-for="b in blocks"
+        v-for="b in ordered"
         :key="b.id"
         :block="b"
         :notes="notesFor(b.id)"
         :mode="blockMode"
         :comments="comments ?? []"
         :reload="reload"
+        :reorderable="reorderable"
+        :dragging="draggingId === b.id"
+        @grab="grab(b.id, $event)"
       />
     </ul>
 

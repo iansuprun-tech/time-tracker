@@ -13,7 +13,7 @@ async function saveOrder(ids: number[]) {
   await refresh();
 }
 
-const { items: ordered, draggingId, start: grab } = useDragSort(() => blocks.value, saveOrder);
+const { items: ordered, draggingId, start: grab, styleFor } = useDragSort(() => blocks.value, saveOrder);
 
 // копировать есть что, только если сегодня был план и завтра ещё пусто
 const canCopy = computed(
@@ -66,6 +66,7 @@ async function copyFromToday() {
         :reload="async () => { await refresh(); }"
         :reorderable="blocks.length > 1"
         :dragging="draggingId === b.id"
+        :style="styleFor(b.id)"
         @grab="grab(b.id, $event)"
       />
     </ul>

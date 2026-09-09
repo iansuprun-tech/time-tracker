@@ -31,7 +31,7 @@ async function saveOrder(ids: number[]) {
   await refresh();
 }
 
-const { items: ordered, draggingId, start: grab } = useDragSort(() => blocks.value, saveOrder);
+const { items: ordered, draggingId, start: grab, styleFor } = useDragSort(() => blocks.value, saveOrder);
 
 const blockMode = computed<"edit" | "plan" | "view">(() => {
   if (readonly.value) return "view";
@@ -151,6 +151,7 @@ async function reload(part: "day" | "comments" = "day") {
         :reload="reload"
         :reorderable="reorderable"
         :dragging="draggingId === b.id"
+        :style="styleFor(b.id)"
         @grab="grab(b.id, $event)"
       />
     </ul>

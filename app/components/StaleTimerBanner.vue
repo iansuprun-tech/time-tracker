@@ -33,7 +33,11 @@ async function resolve() {
         step="5"
         class="w-24 rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
       />
-      <button :disabled="busy" class="rounded bg-amber-600 px-3 py-1 text-white disabled:opacity-50">
+      <button
+        :disabled="busy"
+        class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1 text-white disabled:opacity-50"
+      >
+        <Spinner v-if="busy" />
         минут
       </button>
     </form>

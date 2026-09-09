@@ -133,9 +133,10 @@ async function reload(part: "day" | "comments" = "day") {
       </p>
       <button
         :disabled="busy"
-        class="w-full rounded bg-emerald-600 px-4 py-3 font-medium text-white disabled:opacity-50"
+        class="inline-flex w-full items-center justify-center gap-2 rounded bg-emerald-600 px-4 py-3 font-medium text-white disabled:opacity-50"
         @click="post('/api/day/start')"
       >
+        <Spinner v-if="busy" />
         Старт дня
       </button>
     </div>
@@ -191,9 +192,10 @@ async function reload(part: "day" | "comments" = "day") {
       <button
         v-if="!readonly"
         :disabled="busy"
-        class="w-full rounded border border-black/15 px-4 py-2 text-sm text-black/60 disabled:opacity-50 dark:border-white/20 dark:text-white/60"
+        class="inline-flex w-full items-center justify-center gap-2 rounded border border-black/15 px-4 py-2 text-sm text-black/60 disabled:opacity-50 dark:border-white/20 dark:text-white/60"
         @click="post('/api/day/reopen')"
       >
+        <Spinner v-if="busy" />
         Вернуться к работе
       </button>
     </div>

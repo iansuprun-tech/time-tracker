@@ -54,8 +54,9 @@ async function submit() {
       <p v-if="error" class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
       <button
         :disabled="busy"
-        class="w-full rounded bg-black px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        class="inline-flex w-full items-center justify-center gap-2 rounded bg-black px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
       >
+        <Spinner v-if="busy" />
         Создать аккаунт
       </button>
     </form>

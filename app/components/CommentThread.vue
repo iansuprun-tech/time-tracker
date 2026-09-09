@@ -73,8 +73,9 @@ async function submit() {
       />
       <button
         :disabled="busy"
-        class="rounded border border-black/15 px-2 py-1 disabled:opacity-50 dark:border-white/20"
+        class="inline-flex items-center gap-1.5 rounded border border-black/15 px-2 py-1 disabled:opacity-50 dark:border-white/20"
       >
+        <Spinner v-if="busy" />
         ок
       </button>
     </form>

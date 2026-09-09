@@ -209,7 +209,13 @@ async function saveNote() {
                   autofocus
                   class="w-16 rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
                 />
-                <button class="rounded border border-black/15 px-1.5 py-0.5 dark:border-white/20">ок</button>
+                <button
+                  :disabled="busy"
+                  class="inline-flex items-center gap-1 rounded border border-black/15 px-1.5 py-0.5 disabled:opacity-60 dark:border-white/20"
+                >
+                  <Spinner v-if="busy" />
+                  ок
+                </button>
                 <button
                   v-if="block.actualMin != null"
                   type="button"
@@ -234,7 +240,8 @@ async function saveNote() {
               <select
                 v-if="editable"
                 :value="block.status"
-                class="rounded border border-black/10 bg-transparent px-1 py-0.5 dark:border-white/15"
+                :disabled="busy"
+                class="rounded border border-black/10 bg-transparent px-1 py-0.5 disabled:opacity-50 dark:border-white/15"
                 @change="patch({ status: ($event.target as HTMLSelectElement).value })"
               >
                 <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
@@ -253,18 +260,20 @@ async function saveNote() {
             <button
               v-if="block.status !== 'done'"
               :disabled="busy"
-              class="min-w-14 rounded px-2 py-2 text-xs sm:py-1"
+              class="inline-flex min-w-14 items-center justify-center gap-1.5 rounded px-2 py-2 text-xs disabled:opacity-60 sm:py-1"
               :class="running ? 'border border-black/15 dark:border-white/20' : 'bg-emerald-600 text-white'"
               @click="running ? stopTimer() : startTimer()"
             >
+              <Spinner v-if="busy" />
               {{ running ? "Стоп" : "Старт" }}
             </button>
             <button
               :disabled="busy"
-              class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
+              class="inline-flex items-center justify-center rounded border border-black/15 px-3 py-2 text-xs disabled:opacity-60 dark:border-white/20 sm:px-2 sm:py-1"
               @click="toggleDone"
             >
-              {{ block.status === "done" ? "↺" : "✓" }}
+              <Spinner v-if="busy" />
+              <template v-else>{{ block.status === "done" ? "↺" : "✓" }}</template>
             </button>
             <button
               class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
@@ -277,10 +286,11 @@ async function saveNote() {
           <button
             v-else-if="mode === 'plan'"
             :disabled="busy"
-            class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+            class="inline-flex shrink-0 items-center justify-center rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-60 dark:border-white/20"
             @click="remove"
           >
-            ✕
+            <Spinner v-if="busy" />
+            <template v-else>✕</template>
           </button>
 
           <button
@@ -309,7 +319,13 @@ async function saveNote() {
             placeholder="что происходит по этому блоку"
             class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
           />
-          <button class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20">ок</button>
+          <button
+            :disabled="busy"
+            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-60 dark:border-white/20"
+          >
+            <Spinner v-if="busy" />
+            ок
+          </button>
         </form>
       </div>
     </div>

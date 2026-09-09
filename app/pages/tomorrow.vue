@@ -50,9 +50,10 @@ async function copyFromToday() {
     <button
       v-if="canCopy"
       :disabled="copying"
-      class="mb-4 w-full rounded border border-dashed border-black/20 px-4 py-3 text-sm text-black/60 disabled:opacity-50 dark:border-white/25 dark:text-white/60"
+      class="mb-4 inline-flex w-full items-center justify-center gap-2 rounded border border-dashed border-black/20 px-4 py-3 text-sm text-black/60 disabled:opacity-50 dark:border-white/25 dark:text-white/60"
       @click="copyFromToday"
     >
+      <Spinner v-if="copying" />
       Скопировать план с сегодня ({{ todayData?.blocks.length }} блоков)
     </button>
 

@@ -58,9 +58,10 @@ async function finish() {
 
     <button
       :disabled="busy"
-      class="w-full rounded bg-black px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+      class="inline-flex w-full items-center justify-center gap-2 rounded bg-black px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
       @click="finish"
     >
+      <Spinner v-if="busy" />
       Завершить день
     </button>
   </section>

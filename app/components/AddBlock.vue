@@ -58,9 +58,10 @@ async function submit() {
     />
     <button
       :disabled="saving"
-      class="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+      class="inline-flex items-center justify-center rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
     >
-      +
+      <Spinner v-if="saving" />
+      <template v-else>+</template>
     </button>
   </form>
 </template>

@@ -4,20 +4,27 @@ const { data, refresh } = await useFetch("/api/friends");
 const email = ref("");
 const message = ref("");
 const busy = ref(false);
+// какая именно кнопка ждёт ответ: спиннер должен крутиться на ней одной
+const acting = ref<string | null>(null);
+const sending = ref(false);
+const creating = ref(false);
 
-async function call(fn: () => Promise<unknown>) {
+async function call(key: string, fn: () => Promise<unknown>) {
   busy.value = true;
+  acting.value = key;
   try {
     await fn();
     await refresh();
   } finally {
     busy.value = false;
+    acting.value = null;
   }
 }
 
 async function request() {
-  if (!email.value.trim()) return;
+  if (!email.value.trim() || sending.value) return;
   message.value = "";
+  sending.value = true;
   try {
     const res = await $fetch<{ status: string }>("/api/friends/request", {
       method: "POST",
@@ -28,6 +35,8 @@ async function request() {
     await refresh();
   } catch (e) {
     message.value = (e as { data?: { message?: string } })?.data?.message ?? "Не получилось";
+  } finally {
+    sending.value = false;
   }
 }
 
@@ -35,10 +44,16 @@ const inviteUrl = ref("");
 const inviteCopied = ref(false);
 
 async function createInvite() {
-  const res = await $fetch<{ token: string }>("/api/invites/create", { method: "POST" });
-  inviteUrl.value = `${window.location.origin}/invite-${res.token}`;
-  inviteCopied.value = false;
-  await copyInvite();
+  if (creating.value) return;
+  creating.value = true;
+  try {
+    const res = await $fetch<{ token: string }>("/api/invites/create", { method: "POST" });
+    inviteUrl.value = `${window.location.origin}/invite-${res.token}`;
+    inviteCopied.value = false;
+    await copyInvite();
+  } finally {
+    creating.value = false;
+  }
 }
 
 async function copyInvite() {
@@ -53,9 +68,13 @@ async function copyInvite() {
 }
 
 const respond = (id: number, accept: boolean) =>
-  call(() => $fetch<{ ok: boolean }>("/api/friends/respond", { method: "POST", body: { id, accept } }));
+  call(`respond:${id}`, () =>
+    $fetch<{ ok: boolean }>("/api/friends/respond", { method: "POST", body: { id, accept } }),
+  );
 const remove = (id: number) =>
-  call(() => $fetch<{ ok: boolean }>("/api/friends/remove", { method: "POST", body: { id } }));
+  call(`remove:${id}`, () =>
+    $fetch<{ ok: boolean }>("/api/friends/remove", { method: "POST", body: { id } }),
+  );
 </script>
 
 <template>
@@ -71,9 +90,11 @@ const remove = (id: number) =>
           </p>
         </div>
         <button
-          class="shrink-0 rounded bg-emerald-600 px-3 py-2 text-sm text-white"
+          :disabled="creating"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-60"
           @click="createInvite"
         >
+          <Spinner v-if="creating" />
           Создать
         </button>
       </div>
@@ -102,7 +123,11 @@ const remove = (id: number) =>
         placeholder="почта коллеги"
         class="flex-1 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
       />
-      <button class="rounded bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black">
+      <button
+        :disabled="sending"
+        class="inline-flex items-center gap-1.5 rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-60 dark:bg-white dark:text-black"
+      >
+        <Spinner v-if="sending" />
         Добавить
       </button>
     </form>
@@ -119,16 +144,18 @@ const remove = (id: number) =>
           <span class="flex-1">{{ f.name }} <span class="text-black/40 dark:text-white/40">{{ f.email }}</span></span>
           <button
             :disabled="busy"
-            class="rounded bg-emerald-600 px-3 py-1 text-xs text-white"
+            class="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-60"
             @click="respond(f.id, true)"
           >
+            <Spinner v-if="acting === 'respond:' + f.id" />
             принять
           </button>
           <button
             :disabled="busy"
-            class="rounded border border-black/15 px-3 py-1 text-xs dark:border-white/20"
+            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-3 py-1 text-xs disabled:opacity-60 dark:border-white/20"
             @click="respond(f.id, false)"
           >
+            <Spinner v-if="acting === 'respond:' + f.id" />
             отклонить
           </button>
         </li>
@@ -148,9 +175,10 @@ const remove = (id: number) =>
           </NuxtLink>
           <button
             :disabled="busy"
-            class="rounded border border-black/15 px-3 py-1 text-xs dark:border-white/20"
+            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-3 py-1 text-xs disabled:opacity-60 dark:border-white/20"
             @click="remove(f.id)"
           >
+            <Spinner v-if="acting === 'remove:' + f.id" />
             удалить
           </button>
         </li>

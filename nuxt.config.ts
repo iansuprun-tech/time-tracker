@@ -6,6 +6,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ["~/assets/css/main.css"],
   vite: { plugins: [tailwindcss()] },
+  // календарь переехал на главную, но открытые вкладки и закладки помнят старый адрес
+  routeRules: { "/week": { redirect: "/" } },
   app: {
     head: {
       title: "Трекер дня",

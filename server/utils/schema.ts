@@ -59,6 +59,8 @@ export const blocks = pgTable(
     dayId: integer("day_id").notNull().references(() => days.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     category: text("category"),
+    /** место: «офис», «дома», «у клиента» — свободная строка, шаблоны лежат в presets */
+    location: text("location"),
     plannedMin: integer("planned_min"),
     actualMin: integer("actual_min"),
     /** online — время натикает таймером, offline — вписано руками, таймера не будет */
@@ -72,6 +74,23 @@ export const blocks = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("blocks_day_idx").on(t.dayId)],
+);
+
+/**
+ * Шаблоны мест и категорий: свой список у каждого.
+ * Пополняется сам, когда в блоке появляется новое значение, — руками правится на «Настройках».
+ * kind: category | place
+ */
+export const presets = pgTable(
+  "presets",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("presets_user_kind_name_idx").on(t.userId, t.kind, t.name)],
 );
 
 /** endedAt null = таймер идёт прямо сейчас */

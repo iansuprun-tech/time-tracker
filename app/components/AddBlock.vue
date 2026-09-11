@@ -3,10 +3,18 @@ const props = defineProps<{ date: string; hint: string }>();
 const emit = defineEmits<{ added: [] }>();
 
 const { data: knownCategories } = await useFetch("/api/categories");
+const { data: presets } = await useFetch("/api/presets");
+
+// в подсказках и шаблоны, и всё, что уже встречалось в блоках
+const categoryOptions = computed(() => [
+  ...new Set([...(presets.value?.categories ?? []).map((c) => c.name), ...(knownCategories.value ?? [])]),
+]);
+const placeOptions = computed(() => (presets.value?.places ?? []).map((p) => p.name));
 
 const title = ref("");
 const plannedMin = ref<number | null>(null);
 const category = ref("");
+const location = ref("");
 /** online — время натикает таймером, offline — вписывается руками и таймер не нужен */
 const kind = ref<"online" | "offline">("online");
 const startAt = ref("");
@@ -59,6 +67,7 @@ async function submit() {
         title: title.value,
         plannedMin: plannedMin.value,
         category: category.value,
+        location: location.value,
         kind: kind.value,
         startMin,
         endMin,
@@ -96,7 +105,16 @@ async function submit() {
         class="w-28 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
       />
       <datalist id="known-categories">
-        <option v-for="c in knownCategories ?? []" :key="c" :value="c" />
+        <option v-for="c in categoryOptions" :key="c" :value="c" />
+      </datalist>
+      <input
+        v-model="location"
+        list="known-places"
+        placeholder="место"
+        class="w-28 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+      />
+      <datalist id="known-places">
+        <option v-for="pl in placeOptions" :key="pl" :value="pl" />
       </datalist>
       <input
         v-if="!startAt && !endAt"

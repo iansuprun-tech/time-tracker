@@ -3,6 +3,11 @@ import { SOUNDS } from "~/composables/useChimes";
 
 const { settings, preview, reset } = useSoundSettings();
 
+const { data: presets, refresh: reloadPresets } = await useFetch("/api/presets");
+const reload = async () => {
+  await reloadPresets();
+};
+
 // у «подхода» и «переработки» свои минуты, у остальных событий настраивать нечего
 const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin">> = {
   approach: "approachMin",
@@ -12,7 +17,26 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
 
 <template>
   <main class="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-    <h1 class="mb-1 text-xl font-semibold">Звуки таймера</h1>
+    <h1 class="mb-6 text-xl font-semibold">Настройки</h1>
+
+    <div class="mb-8 space-y-4">
+      <PresetList
+        kind="category"
+        title="Категории"
+        hint="Подсказки в поле категории. Новое значение из блока попадает сюда само."
+        :items="presets?.categories ?? []"
+        :reload="reload"
+      />
+      <PresetList
+        kind="place"
+        title="Места"
+        hint="Офис, дом, коворкинг — подставляются в поле места."
+        :items="presets?.places ?? []"
+        :reload="reload"
+      />
+    </div>
+
+    <h2 class="mb-1 text-lg font-semibold">Звуки таймера</h2>
     <p class="mb-6 text-sm text-black/50 dark:text-white/50">
       Звучит только на своём начатом дне и только пока вкладка открыта. Настройки живут в этом браузере.
     </p>

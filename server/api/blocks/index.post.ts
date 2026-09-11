@@ -3,6 +3,7 @@ import { db } from "../../utils/db";
 import { blocks } from "../../utils/schema";
 import { ensureDay, plannedWindow } from "../../utils/day";
 import { requireUserId } from "../../utils/session";
+import { rememberPreset } from "../../utils/presets";
 import { fail } from "../../utils/http";
 
 export default defineEventHandler(async (event) => {
@@ -12,6 +13,7 @@ export default defineEventHandler(async (event) => {
     title: string;
     plannedMin?: number | null;
     category?: string | null;
+    location?: string | null;
     /** online — время натикает таймером, offline — вписано руками */
     kind?: string;
     startMin?: number | null;
@@ -45,11 +47,18 @@ export default defineEventHandler(async (event) => {
       plannedStartMin: window?.start ?? null,
       plannedEndMin: window?.end ?? null,
       category: body.category?.trim() || null,
+      location: body.location?.trim() || null,
       sort: max + 1,
       // всё, что заведено после старта дня, в план не входило
       isUnplanned: day.status === "started",
     })
     .returning();
+
+  // введённое руками значение становится шаблоном: список ведёт себя сам
+  await Promise.all([
+    rememberPreset(userId, "category", body.category),
+    rememberPreset(userId, "place", body.location),
+  ]);
 
   return created;
 });

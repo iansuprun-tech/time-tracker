@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
       dayId: to.id,
       title: b.title,
       category: b.category,
+      location: b.location,
       plannedMin: b.plannedMin,
       kind: b.kind,
       plannedStartMin: b.plannedStartMin,

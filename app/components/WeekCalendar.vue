@@ -44,6 +44,7 @@ type Seg = {
   to: number;
   title: string;
   category: string | null;
+  location: string | null;
   status: string;
   isUnplanned: boolean;
   running: boolean;
@@ -75,6 +76,7 @@ const pieces = computed(() => {
         to: (stop.getTime() - dayStart.getTime()) / 60_000,
         title: e.title,
         category: e.category,
+        location: e.location,
         status: e.status,
         isUnplanned: e.isUnplanned,
         running: !e.endedAt && stop === end,
@@ -94,6 +96,7 @@ const pieces = computed(() => {
       to: b.endMin,
       title: b.title,
       category: b.category,
+      location: b.location,
       status: b.status,
       isUnplanned: b.isUnplanned,
       running: false,
@@ -192,6 +195,11 @@ function planStyle(p: { startMin: number; endMin: number }) {
 /** Короткий блок не вмещает вторую строку — время уезжает в ту же, что и название */
 function compact(s: Seg) {
   return (s.to - s.from) * (HOUR_PX / 60) < 34;
+}
+
+/** Место показываем только там, где под него есть третья строка */
+function roomy(s: Seg) {
+  return (s.to - s.from) * (HOUR_PX / 60) >= 52;
 }
 
 const PALETTE = [
@@ -361,7 +369,7 @@ function openDay(date: string) {
                 s.running ? 'ring-2 ring-red-400' : '',
               ]"
               :style="styleFor(s)"
-              :title="`${s.title} · ${hhmm(s.from)}–${hhmm(s.to)}${s.category ? ' · ' + s.category : ''}`"
+              :title="`${s.title} · ${hhmm(s.from)}–${hhmm(s.to)}${s.category ? ' · ' + s.category : ''}${s.location ? ' · ' + s.location : ''}`"
               @click="openDay(s.date)"
             >
               <template v-if="compact(s)">
@@ -371,6 +379,7 @@ function openDay(date: string) {
               <template v-else>
                 <div class="font-medium">{{ s.title }}</div>
                 <div class="text-white/80">{{ hhmm(s.from) }} – {{ hhmm(s.to) }}</div>
+                <div v-if="s.location && roomy(s)" class="truncate text-white/70">📍 {{ s.location }}</div>
               </template>
             </button>
           </div>

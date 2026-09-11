@@ -3,6 +3,7 @@ type Block = {
   id: number;
   title: string;
   category: string | null;
+  location: string | null;
   plannedMin: number | null;
   actualMin: number | null;
   status: string;
@@ -104,6 +105,7 @@ async function call(fn: () => Promise<unknown>) {
 
 type BlockPatch = {
   status?: string;
+  location?: string | null;
   actualMin?: number | null;
   title?: string;
   category?: string | null;
@@ -221,6 +223,12 @@ async function saveNote() {
                 class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
               >
                 {{ block.category }}
+              </span>
+              <span
+                v-if="block.location"
+                class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
+              >
+                📍 {{ block.location }}
               </span>
               <span
                 v-if="offline"

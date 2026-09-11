@@ -8,7 +8,7 @@ const LINKS = [
   { to: "/day", label: "Мой день" },
   { to: "/tomorrow", label: "Завтра" },
   { to: "/friends", label: "Друзья" },
-  { to: "/settings", label: "Звуки" },
+  { to: "/settings", label: "Настройки" },
 ];
 
 // страницы грузят данные до отрисовки, поэтому вкладка подсвечивается

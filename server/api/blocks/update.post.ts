@@ -4,6 +4,7 @@ import { blocks } from "../../utils/schema";
 import { stopRunning, plannedWindow } from "../../utils/day";
 import { requireUserId } from "../../utils/session";
 import { assertOwnBlock } from "../../utils/access";
+import { rememberPreset } from "../../utils/presets";
 
 export default defineEventHandler(async (event) => {
   const userId = await requireUserId(event);
@@ -13,6 +14,7 @@ export default defineEventHandler(async (event) => {
     actualMin?: number | null;
     title?: string;
     category?: string | null;
+    location?: string | null;
     /** окно целиком: обе границы или обе null — «убрать время» */
     startMin?: number | null;
     endMin?: number | null;
@@ -36,6 +38,7 @@ export default defineEventHandler(async (event) => {
       ...(body.title ? { title: body.title } : {}),
       ...(body.actualMin !== undefined ? { actualMin: body.actualMin } : {}),
       ...(body.category !== undefined ? { category: body.category?.trim() || null } : {}),
+      ...(body.location !== undefined ? { location: body.location?.trim() || null } : {}),
       ...(touchesWindow
         ? {
             plannedStartMin: window?.start ?? null,
@@ -47,6 +50,11 @@ export default defineEventHandler(async (event) => {
         : {}),
     })
     .where(eq(blocks.id, body.id));
+
+  await Promise.all([
+    rememberPreset(userId, "category", body.category),
+    rememberPreset(userId, "place", body.location),
+  ]);
 
   return { ok: true };
 });

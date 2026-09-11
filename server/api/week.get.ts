@@ -32,6 +32,9 @@ export default defineEventHandler(async (event) => {
         status: blocks.status,
         isUnplanned: blocks.isUnplanned,
         plannedMin: blocks.plannedMin,
+        kind: blocks.kind,
+        startMin: blocks.plannedStartMin,
+        endMin: blocks.plannedEndMin,
         entryId: timeEntries.id,
         startedAt: timeEntries.startedAt,
         endedAt: timeEntries.endedAt,
@@ -61,12 +64,29 @@ export default defineEventHandler(async (event) => {
       endedAt: r.endedAt ? r.endedAt.toISOString() : null,
     }));
 
-  // блок без единого интервала в календаре не виден — показываем его отдельной строкой,
-  // иначе неделя выглядит пустее, чем была
+  // каждый блок один раз: интервалы размножили строки джойном
+  const uniq = rows.filter((r, i, all) => all.findIndex((x) => x.blockId === r.blockId) === i);
   const tracked = new Set(entries.map((e) => e.blockId));
-  const untracked = rows
-    .filter((r) => r.date >= from && !tracked.has(r.blockId))
-    .filter((r, i, all) => all.findIndex((x) => x.blockId === r.blockId) === i)
+
+  // окно «с — по»: у онлайна это намерение (контур), у офлайна — само время задачи
+  const planned = uniq
+    .filter((r) => r.date >= from && r.startMin != null && r.endMin != null)
+    .map((r) => ({
+      id: r.blockId,
+      date: r.date,
+      title: r.title,
+      category: r.category,
+      status: r.status,
+      isUnplanned: r.isUnplanned,
+      kind: r.kind,
+      startMin: r.startMin!,
+      endMin: r.endMin!,
+    }));
+
+  // блок без интервала и без окна в календаре не виден — показываем его отдельной строкой,
+  // иначе неделя выглядит пустее, чем была
+  const untracked = uniq
+    .filter((r) => r.date >= from && !tracked.has(r.blockId) && r.startMin == null)
     .map((r) => ({
       id: r.blockId,
       date: r.date,
@@ -83,6 +103,7 @@ export default defineEventHandler(async (event) => {
     owner: owner[0] ?? null,
     days: dayRows,
     entries,
+    planned,
     untracked,
   };
 });

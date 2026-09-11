@@ -82,8 +82,31 @@ const pieces = computed(() => {
       cur = stop;
     }
   }
+
+  // офлайн-задача таймером не тикает: её окно и есть факт
+  for (const b of data.value?.planned ?? []) {
+    if (b.kind !== "offline") continue;
+    out.push({
+      key: `b${b.id}`,
+      blockId: b.id,
+      date: b.date,
+      from: b.startMin,
+      to: b.endMin,
+      title: b.title,
+      category: b.category,
+      status: b.status,
+      isUnplanned: b.isUnplanned,
+      running: false,
+    });
+  }
+
   return out.filter((s) => dates.value.includes(s.date));
 });
+
+/** Окно онлайн-задачи — намерение: контур позади факта, чтобы видеть расхождение */
+const plans = computed(() =>
+  (data.value?.planned ?? []).filter((p) => p.kind === "online" && dates.value.includes(p.date)),
+);
 
 /** Рабочий день по умолчанию 8–20, но сетка растягивается под то, что в ней есть */
 const bounds = computed(() => {
@@ -92,6 +115,10 @@ const bounds = computed(() => {
   for (const s of pieces.value) {
     lo = Math.min(lo, s.from);
     hi = Math.max(hi, s.to);
+  }
+  for (const p of plans.value) {
+    lo = Math.min(lo, p.startMin);
+    hi = Math.max(hi, p.endMin);
   }
   return { start: Math.max(0, Math.floor(lo / 60)), end: Math.min(24, Math.ceil(hi / 60)) };
 });
@@ -135,6 +162,7 @@ const columns = computed(() =>
     return {
       date,
       items,
+      plans: plans.value.filter((p) => p.date === date),
       minutes: items.reduce((sum, s) => sum + (s.to - s.from), 0),
       untracked: (data.value?.untracked ?? []).filter((b) => b.date === date),
       dayStatus: data.value?.days.find((d) => d.date === date)?.status ?? null,
@@ -151,6 +179,13 @@ function styleFor(s: Seg) {
     height: `${Math.max(14, ((s.to - s.from) / 60) * HOUR_PX - 2)}px`,
     left: `calc(${s.lane * width}% + 2px)`,
     width: `calc(${width}% - 4px)`,
+  };
+}
+
+function planStyle(p: { startMin: number; endMin: number }) {
+  return {
+    top: `${((p.startMin - bounds.value.start * 60) / 60) * HOUR_PX}px`,
+    height: `${Math.max(14, ((p.endMin - p.startMin) / 60) * HOUR_PX - 2)}px`,
   };
 }
 
@@ -304,6 +339,15 @@ function openDay(date: string) {
               :style="{ top: `${nowTop}px` }"
             >
               <span class="absolute -left-1 -top-[3px] h-1.5 w-1.5 rounded-full bg-red-500" />
+            </div>
+
+            <div
+              v-for="p in c.plans"
+              :key="`p${p.id}`"
+              class="pointer-events-none absolute inset-x-1 overflow-hidden rounded border border-dashed border-black/25 px-1.5 py-0.5 text-[11px] leading-tight text-black/45 dark:border-white/30 dark:text-white/45"
+              :style="planStyle(p)"
+            >
+              {{ p.title }}
             </div>
 
             <button

@@ -61,6 +61,11 @@ export const blocks = pgTable(
     category: text("category"),
     plannedMin: integer("planned_min"),
     actualMin: integer("actual_min"),
+    /** online — время натикает таймером, offline — вписано руками, таймера не будет */
+    kind: text("kind").notNull().default("online"),
+    /** плановое окно в минутах от полуночи своего дня: дата у дня своя, часовой пояс тут ни при чём */
+    plannedStartMin: integer("planned_start_min"),
+    plannedEndMin: integer("planned_end_min"),
     status: text("status").notNull().default("todo"),
     isUnplanned: boolean("is_unplanned").notNull().default(false),
     sort: integer("sort").notNull().default(0),

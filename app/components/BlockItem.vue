@@ -9,6 +9,10 @@ type Block = {
   isUnplanned: boolean;
   trackedMin: number;
   runningSince: string | null;
+  /** online — время натикает таймером, offline — вписано руками */
+  kind: string;
+  plannedStartMin: number | null;
+  plannedEndMin: number | null;
 };
 
 type Comment = {
@@ -51,6 +55,19 @@ const STATUSES = [
   { value: "dropped", label: "отменено" },
 ];
 
+const offline = computed(() => props.block.kind === "offline");
+const hasWindow = computed(
+  () => props.block.plannedStartMin != null && props.block.plannedEndMin != null,
+);
+const windowLabel = computed(() =>
+  hasWindow.value
+    ? `${minToHhmm(props.block.plannedStartMin!)}–${minToHhmm(props.block.plannedEndMin!)}`
+    : null,
+);
+const windowOpen = ref(false);
+const fromAt = ref("");
+const toAt = ref("");
+
 const noteOpen = ref(false);
 const noteText = ref("");
 const factOpen = ref(false);
@@ -85,7 +102,14 @@ async function call(fn: () => Promise<unknown>) {
   }
 }
 
-type BlockPatch = { status?: string; actualMin?: number | null; title?: string; category?: string | null };
+type BlockPatch = {
+  status?: string;
+  actualMin?: number | null;
+  title?: string;
+  category?: string | null;
+  startMin?: number | null;
+  endMin?: number | null;
+};
 
 const patch = (body: BlockPatch) =>
   call(() =>
@@ -130,6 +154,26 @@ async function saveFact() {
 async function resetFact() {
   await patch({ actualMin: null });
   factOpen.value = false;
+}
+
+function openWindow() {
+  fromAt.value = hasWindow.value ? minToHhmm(props.block.plannedStartMin!) : "";
+  toAt.value = hasWindow.value ? minToHhmm(props.block.plannedEndMin!) : "";
+  windowOpen.value = true;
+}
+
+async function saveWindow() {
+  const start = hhmmToMin(fromAt.value);
+  const end = hhmmToMin(toAt.value);
+  // криво введённое время молча не сохраняем: поля остаются открытыми
+  if (start === null || end === null || end <= start) return;
+  await patch({ startMin: start, endMin: end });
+  windowOpen.value = false;
+}
+
+async function clearWindow() {
+  await patch({ startMin: null, endMin: null });
+  windowOpen.value = false;
 }
 
 async function saveNote() {
@@ -179,6 +223,12 @@ async function saveNote() {
                 {{ block.category }}
               </span>
               <span
+                v-if="offline"
+                class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/50 dark:bg-white/10 dark:text-white/50"
+              >
+                офлайн
+              </span>
+              <span
                 v-if="block.isUnplanned"
                 class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
               >
@@ -190,7 +240,48 @@ async function saveNote() {
             </div>
 
             <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
-              <span v-if="block.plannedMin != null">план {{ block.plannedMin }}м</span>
+              <form v-if="windowOpen" class="flex items-center gap-1" @submit.prevent="saveWindow">
+                <input
+                  v-model="fromAt"
+                  type="time"
+                  step="300"
+                  class="rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                />
+                –
+                <input
+                  v-model="toAt"
+                  type="time"
+                  step="300"
+                  class="rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                />
+                <button
+                  :disabled="busy"
+                  class="inline-flex items-center gap-1 rounded border border-black/15 px-1.5 py-0.5 disabled:opacity-60 dark:border-white/20"
+                >
+                  <Spinner v-if="busy" />
+                  ок
+                </button>
+                <button
+                  v-if="hasWindow"
+                  type="button"
+                  class="text-black/40 dark:text-white/40"
+                  @click="clearWindow"
+                >
+                  убрать
+                </button>
+              </form>
+
+              <button
+                v-else-if="mode !== 'view'"
+                class="underline decoration-dotted underline-offset-2"
+                @click="openWindow"
+              >
+                {{ windowLabel ?? "+время" }}
+              </button>
+
+              <span v-else-if="windowLabel">{{ windowLabel }}</span>
+
+              <span v-if="block.plannedMin != null && !hasWindow">план {{ block.plannedMin }}м</span>
 
               <ElapsedTimer
                 v-if="ticking"
@@ -258,7 +349,7 @@ async function saveNote() {
 
           <div v-if="editable" class="flex shrink-0 items-center gap-1 self-start">
             <button
-              v-if="block.status !== 'done'"
+              v-if="block.status !== 'done' && !offline"
               :disabled="busy"
               class="inline-flex min-w-14 items-center justify-center gap-1.5 rounded px-2 py-2 text-xs disabled:opacity-60 sm:py-1"
               :class="running ? 'border border-black/15 dark:border-white/20' : 'bg-emerald-600 text-white'"

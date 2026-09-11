@@ -39,6 +39,14 @@ export default defineEventHandler(async (event) => {
       title: b.title,
       category: b.category,
       plannedMin: b.plannedMin,
+      kind: b.kind,
+      plannedStartMin: b.plannedStartMin,
+      plannedEndMin: b.plannedEndMin,
+      // у офлайна окно и есть факт — как при заведении такого блока руками
+      actualMin:
+        b.kind === "offline" && b.plannedStartMin != null && b.plannedEndMin != null
+          ? b.plannedEndMin - b.plannedStartMin
+          : null,
       sort: max + i + 1,
     })),
   );

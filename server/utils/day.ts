@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "./db";
 import { days, blocks, timeEntries, notes, comments } from "./schema";
+import { fail } from "./http";
 
 /** Только чтение: просмотр даты не должен плодить пустые дни в базе */
 export async function findDay(userId: number, date: string) {
@@ -34,6 +35,18 @@ export async function ensureDay(userId: number, date: string) {
   if (existing) return existing;
   const [created] = await db.insert(days).values({ userId, date }).returning();
   return created!;
+}
+
+/**
+ * Плановое окно «с — по» в минутах от полуночи. Оба конца или ни одного:
+ * половина окна на календаре не рисуется и смысла не несёт.
+ */
+export function plannedWindow(startMin?: number | null, endMin?: number | null) {
+  if (startMin == null && endMin == null) return null;
+  if (startMin == null || endMin == null) throw fail(400, "Нужно и начало, и конец");
+  if (!Number.isInteger(startMin) || !Number.isInteger(endMin)) throw fail(400, "Неверное время");
+  if (startMin < 0 || endMin > 1440 || endMin <= startMin) throw fail(400, "Неверное время");
+  return { start: startMin, end: endMin };
 }
 
 /** actualMin, выставленный руками, перекрывает сумму интервалов */

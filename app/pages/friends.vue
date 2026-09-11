@@ -173,6 +173,12 @@ const remove = (id: number) =>
           <NuxtLink :to="`/u-${f.userId}`" class="flex-1 underline underline-offset-4">
             {{ f.name }}
           </NuxtLink>
+          <NuxtLink
+            :to="{ path: '/week', query: { userId: f.userId } }"
+            class="text-xs text-black/50 underline underline-offset-4 dark:text-white/50"
+          >
+            неделя
+          </NuxtLink>
           <button
             :disabled="busy"
             class="inline-flex items-center gap-1.5 rounded border border-black/15 px-3 py-1 text-xs disabled:opacity-60 dark:border-white/20"

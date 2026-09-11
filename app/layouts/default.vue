@@ -5,6 +5,7 @@ const router = useRouter();
 
 const LINKS = [
   { to: "/", label: "Мой день" },
+  { to: "/week", label: "Неделя" },
   { to: "/tomorrow", label: "Завтра" },
   { to: "/friends", label: "Друзья" },
   { to: "/settings", label: "Звуки" },
@@ -40,7 +41,10 @@ async function logout() {
     <NuxtLoadingIndicator color="#059669" :height="2" />
 
     <nav class="border-b border-black/10 px-4 py-3 text-sm dark:border-white/15">
-      <div class="mx-auto flex max-w-2xl items-center gap-4">
+      <div
+        class="mx-auto flex items-center gap-4"
+        :class="route.path === '/week' ? 'max-w-6xl' : 'max-w-2xl'"
+      >
         <NuxtLink
           v-for="l in LINKS"
           :key="l.to"

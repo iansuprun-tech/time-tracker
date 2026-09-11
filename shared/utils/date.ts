@@ -9,9 +9,20 @@ export function tomorrowDate() {
   return localDate(d);
 }
 
+/** Дата, сдвинутая на n дней; n может быть отрицательным */
+export function shiftDays(date: string, n: number) {
+  const [y, m, d] = date.split("-").map(Number);
+  return localDate(new Date(y!, m! - 1, d! + n));
+}
+
 /** Следующий день от переданной даты */
 export function nextDay(date: string) {
+  return shiftDays(date, 1);
+}
+
+/** Понедельник той недели, в которую попадает дата */
+export function weekStart(date: string) {
   const [y, m, d] = date.split("-").map(Number);
-  const next = new Date(y!, m! - 1, d! + 1);
-  return localDate(next);
+  const dow = new Date(y!, m! - 1, d!).getDay();
+  return shiftDays(date, -((dow + 6) % 7));
 }

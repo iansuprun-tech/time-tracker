@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /** Неделя фактом: то же, что в дне, но разложенное по часам — свой календарь и чужой на просмотр */
 const props = defineProps<{ ownerId?: number }>();
+const { ownerId } = toRefs(props);
 
 const route = useRoute();
 const router = useRouter();
@@ -212,7 +213,7 @@ function shiftWeek(n: number) {
 }
 
 function openDay(date: string) {
-  const path = props.ownerId ? `/u-${props.ownerId}` : "/";
+  const path = props.ownerId ? `/u-${props.ownerId}` : "/day";
   router.push({ path, query: { date } });
 }
 </script>
@@ -232,7 +233,7 @@ function openDay(date: string) {
         <button class="px-2 text-black/50 dark:text-white/50" @click="shiftWeek(1)">→</button>
         <button
           class="ml-2 rounded border border-black/15 px-2 py-1 text-xs text-black/60 dark:border-white/20 dark:text-white/60"
-          @click="router.push({ query: {} })"
+          @click="router.push({ query: { ...(ownerId ? { userId: String(ownerId) } : {}) } })"
         >
           Сегодня
         </button>

@@ -174,7 +174,7 @@ const remove = (id: number) =>
             {{ f.name }}
           </NuxtLink>
           <NuxtLink
-            :to="{ path: '/week', query: { userId: f.userId } }"
+            :to="{ path: '/', query: { userId: f.userId } }"
             class="text-xs text-black/50 underline underline-offset-4 dark:text-white/50"
           >
             неделя

@@ -44,7 +44,7 @@ async function copyFromToday() {
           {{ date }} · {{ blocks.length }} блоков · {{ plannedMin }}м
         </p>
       </div>
-      <NuxtLink to="/" class="text-sm underline underline-offset-4">← Сегодня</NuxtLink>
+      <NuxtLink to="/day" class="text-sm underline underline-offset-4">← Сегодня</NuxtLink>
     </header>
 
     <button

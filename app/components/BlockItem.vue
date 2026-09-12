@@ -254,21 +254,11 @@ async function saveNote() {
             </div>
 
             <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
-              <form v-if="windowOpen" class="flex items-center gap-1" @submit.prevent="saveWindow">
-                <input
-                  v-model="fromAt"
-                  type="time"
-                  step="300"
-                  class="field px-2 py-0.5"
-                />
-                –
-                <input
-                  v-model="toAt"
-                  type="time"
-                  step="300"
-                  class="field px-2 py-0.5"
-                />
-                <button :disabled="busy" class="btn-soft px-2 py-0.5 text-xs">
+              <form v-if="windowOpen" class="flex flex-wrap items-center gap-1.5" @submit.prevent="saveWindow">
+                <TimeField v-model="fromAt" placeholder="с" />
+                <span class="muted">—</span>
+                <TimeField v-model="toAt" placeholder="по" :from-min="hhmmToMin(fromAt)" />
+                <button :disabled="busy" class="btn-soft px-2 py-1 text-xs">
                   <Spinner v-if="busy" />
                   ок
                 </button>

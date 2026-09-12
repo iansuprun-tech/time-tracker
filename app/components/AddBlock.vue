@@ -21,6 +21,34 @@ const startAt = ref("");
 const endAt = ref("");
 const error = ref("");
 const saving = ref(false);
+// пустая пара полей на виду выглядит недоделанной — до первого клика её нет
+const timeOpen = ref(false);
+
+const spanMin = computed(() => {
+  const a = hhmmToMin(startAt.value);
+  const b = hhmmToMin(endAt.value);
+  return a !== null && b !== null && b > a ? b - a : null;
+});
+
+const spanLabel = computed(() => {
+  const m = spanMin.value;
+  if (!m) return null;
+  if (m < 60) return `${m}м`;
+  const rest = m % 60;
+  return rest ? `${Math.floor(m / 60)}ч ${rest}м` : `${Math.floor(m / 60)}ч`;
+});
+
+function openTime() {
+  timeOpen.value = true;
+  if (!startAt.value && !endAt.value) suggestWindow();
+}
+
+function clearTime() {
+  startAt.value = "";
+  endAt.value = "";
+  timeOpen.value = false;
+  if (kind.value === "offline") kind.value = "online";
+}
 
 /** Ближайшая четверть часа: офлайн-задачу вписывают про «только что», а не с нуля */
 function suggestWindow() {
@@ -36,7 +64,8 @@ function suggestWindow() {
 function pick(next: "online" | "offline") {
   kind.value = next;
   error.value = "";
-  if (next === "offline" && !startAt.value && !endAt.value) suggestWindow();
+  // офлайн без окна не существует: показываем поля сразу и заполняем разумным
+  if (next === "offline") openTime();
 }
 
 /** Время указано — задача стоит колом; нет — плывёт вместе с днём */
@@ -90,7 +119,7 @@ async function submit() {
       startAt.value = minToHhmm(endMin);
       endAt.value = minToHhmm(Math.min(endMin + 60, 1440));
     }
-    // категорию оставляем — подряд обычно заводят блоки одного типа
+    // категорию и место оставляем — подряд обычно заводят блоки одного типа
     emit("added");
   } catch (e) {
     error.value = (e as { data?: { message?: string } }).data?.message ?? "Не сохранилось";
@@ -104,12 +133,7 @@ async function submit() {
   <form class="space-y-3" @submit.prevent="submit">
     <div class="flex flex-wrap gap-2">
       <input v-model="title" :placeholder="hint" class="field min-w-44 flex-1" />
-      <input
-        v-model="category"
-        list="known-categories"
-        placeholder="категория"
-        class="field w-32"
-      />
+      <input v-model="category" list="known-categories" placeholder="категория" class="field w-32" />
       <datalist id="known-categories">
         <option v-for="c in categoryOptions" :key="c" :value="c" />
       </datalist>
@@ -118,7 +142,7 @@ async function submit() {
         <option v-for="pl in placeOptions" :key="pl" :value="pl" />
       </datalist>
       <input
-        v-if="!startAt && !endAt"
+        v-if="!timeOpen"
         v-model.number="plannedMin"
         type="number"
         min="0"
@@ -150,18 +174,21 @@ async function submit() {
         </button>
       </div>
 
-      <input v-model="startAt" type="time" step="300" class="field px-2 py-1" />
-      <span class="muted">—</span>
-      <input v-model="endAt" type="time" step="300" class="field px-2 py-1" />
-
-      <button
-        v-if="startAt || endAt"
-        type="button"
-        class="btn-quiet"
-        @click="startAt = ''; endAt = ''"
-      >
-        убрать время
+      <button v-if="!timeOpen" type="button" class="btn-soft px-2.5 py-1 text-xs" @click="openTime">
+        <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7.5V12l3 1.5" />
+        </svg>
+        Указать время
       </button>
+
+      <template v-else>
+        <TimeField v-model="startAt" placeholder="с" />
+        <span class="muted">—</span>
+        <TimeField v-model="endAt" placeholder="по" :from-min="hhmmToMin(startAt)" />
+        <span v-if="spanLabel" class="chip">{{ spanLabel }}</span>
+        <button type="button" class="btn-quiet" @click="clearTime">убрать</button>
+      </template>
     </div>
 
     <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>

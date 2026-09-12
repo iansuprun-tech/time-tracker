@@ -69,6 +69,8 @@ const unplannedMin = computed(() =>
   blocks.value.filter((b) => b.isUnplanned).reduce((s, b) => s + (b.actualMin ?? b.trackedMin), 0),
 );
 
+const goToday = () => router.push({ query: { ...route.query, date: localDate() } });
+
 function shift(days: number) {
   const [y, m, d] = date.value.split("-").map(Number);
   const next = new Date(y!, m! - 1, d! + days);
@@ -95,30 +97,43 @@ async function reload(part: "day" | "comments" = "day") {
 </script>
 
 <template>
-  <main class="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-    <header class="mb-4">
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 class="text-xl font-semibold">
+  <main class="page">
+    <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="page-title">
           {{ readonly ? data?.owner?.name : "Мой день" }}
-          <span v-if="finished" class="text-base font-normal text-black/40 dark:text-white/40">
+          <span v-if="finished" class="text-base font-normal muted">
             · закрыт {{ data?.day.mood ? MOOD_EMOJI[data.day.mood] : "" }}
           </span>
         </h1>
-        <div class="flex items-center gap-2 text-sm">
-          <button class="px-2 text-black/50 dark:text-white/50" @click="shift(-1)">←</button>
-          <span>{{ date }}</span>
-          <button class="px-2 text-black/50 dark:text-white/50" @click="shift(1)">→</button>
+        <div class="mt-1 flex items-center gap-1 text-sm muted">
+          <span>{{ formatHuman(date) }}</span>
+          <button class="btn-quiet px-1.5" aria-label="Предыдущий день" @click="shift(-1)">‹</button>
+          <button class="btn-quiet px-1.5" aria-label="Следующий день" @click="shift(1)">›</button>
+          <button v-if="!isToday" class="btn-quiet" @click="goToday">сегодня</button>
         </div>
       </div>
 
-      <p class="text-sm text-black/50 dark:text-white/50">
-        <template v-if="status !== 'draft'">
-          {{ doneCount }}/{{ blocks.length }} · план {{ plannedMin }}м / факт {{ factMin }}м
-          <template v-if="unplannedMin > 0"> · вне плана {{ unplannedMin }}м</template>
-        </template>
-        <template v-else>день не начат</template>
-        <template v-if="!isToday"> · не сегодня</template>
-      </p>
+      <div v-if="status !== 'draft'" class="flex gap-4 text-sm">
+        <div>
+          <div class="text-[11px] uppercase tracking-wide muted">готово</div>
+          <div class="font-medium tabular-nums">{{ doneCount }}/{{ blocks.length }}</div>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-wide muted">план</div>
+          <div class="font-medium tabular-nums">{{ plannedMin }}м</div>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-wide muted">факт</div>
+          <div class="font-medium tabular-nums">{{ factMin }}м</div>
+        </div>
+        <div v-if="unplannedMin > 0">
+          <div class="text-[11px] uppercase tracking-wide muted">вне плана</div>
+          <div class="font-medium tabular-nums text-amber-600 dark:text-amber-400">
+            {{ unplannedMin }}м
+          </div>
+        </div>
+      </div>
     </header>
 
     <div v-if="data?.stale" class="mb-4">
@@ -130,28 +145,44 @@ async function reload(part: "day" | "comments" = "day") {
       />
     </div>
 
-    <div
+    <section
       v-if="!readonly && status === 'draft' && isToday"
-      class="mb-6 rounded-lg border border-black/10 p-4 dark:border-white/15"
+      class="card card-pad mb-5 flex flex-wrap items-center gap-4"
     >
-      <p class="mb-3 text-sm text-black/60 dark:text-white/60">
-        {{
-          blocks.length
-            ? `План на сегодня: ${blocks.length} блоков. После старта он замораживается.`
-            : "План пуст. Можно стартовать и добавлять по ходу, но тогда сравнивать будет не с чем."
-        }}
-      </p>
-      <button
-        :disabled="busy"
-        class="inline-flex w-full items-center justify-center gap-2 rounded bg-emerald-600 px-4 py-3 font-medium text-white disabled:opacity-50"
-        @click="post('/api/day/start')"
+      <span
+        class="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
       >
+        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      </span>
+      <div class="min-w-40 flex-1">
+        <h2 class="font-medium">День не начат</h2>
+        <p class="text-sm muted">
+          {{
+            blocks.length
+              ? `План на сегодня: ${blocks.length} блоков. После старта он замораживается.`
+              : "План пуст. Можно стартовать и добавлять по ходу, но тогда сравнивать будет не с чем."
+          }}
+        </p>
+      </div>
+      <button :disabled="busy" class="btn-primary px-4 py-2.5" @click="post('/api/day/start')">
         <Spinner v-if="busy" />
-        Старт дня
+        Начать день
       </button>
-    </div>
+    </section>
 
-    <ul class="space-y-2">
+    <section v-if="!readonly && !finished" class="card card-pad mb-5">
+      <h2 class="mb-3 text-sm font-medium">{{ started ? "Добавить задачу" : "План на день" }}</h2>
+      <AddBlock
+        :date="date"
+        :hint="started ? 'новая задача (пойдёт как вне плана)' : 'название блока'"
+        @added="reload()"
+      />
+    </section>
+
+    <ul v-if="blocks.length" class="space-y-2">
       <BlockItem
         v-for="b in ordered"
         :key="b.id"
@@ -168,19 +199,17 @@ async function reload(part: "day" | "comments" = "day") {
       />
     </ul>
 
-    <p v-if="!blocks.length" class="py-6 text-center text-sm text-black/40 dark:text-white/40">
-      {{ readonly ? "В этот день блоков не было." : "Пусто. План пишется накануне — но можно и здесь." }}
-    </p>
-
-    <div v-if="!readonly && !finished" class="mt-4">
-      <AddBlock
-        :date="date"
-        :hint="started ? 'новая задача (пойдёт как вне плана)' : 'блок дня'"
-        @added="reload()"
-      />
+    <div v-else class="card card-pad py-10 text-center">
+      <svg viewBox="0 0 24 24" class="mx-auto size-7 text-black/20 dark:text-white/20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+      </svg>
+      <p class="mt-2 text-sm font-medium">План пуст</p>
+      <p class="text-sm muted">
+        {{ readonly ? "В этот день блоков не было." : "Добавьте первый блок, чтобы увидеть план на день." }}
+      </p>
     </div>
 
-    <div v-if="!readonly && started" class="mt-8">
+    <div v-if="!readonly && started" class="mt-6">
       <FinishDay
         :date="date"
         :mood="data?.day.mood ?? null"
@@ -189,29 +218,21 @@ async function reload(part: "day" | "comments" = "day") {
       />
     </div>
 
-    <div v-if="finished" class="mt-8 space-y-4">
-      <section
-        v-if="data?.day.dayNote"
-        class="rounded-lg border border-black/10 p-4 text-sm dark:border-white/15"
-      >
+    <div v-if="finished" class="mt-6 space-y-4">
+      <section v-if="data?.day.dayNote" class="card card-pad text-sm">
         <h2 class="mb-2 font-medium">Ощущения за день</h2>
         <p class="whitespace-pre-wrap text-black/70 dark:text-white/70">{{ data.day.dayNote }}</p>
       </section>
 
       <StandupSummary :date="date" :owner-id="ownerId" />
 
-      <button
-        v-if="!readonly"
-        :disabled="busy"
-        class="inline-flex w-full items-center justify-center gap-2 rounded border border-black/15 px-4 py-2 text-sm text-black/60 disabled:opacity-50 dark:border-white/20 dark:text-white/60"
-        @click="post('/api/day/reopen')"
-      >
+      <button v-if="!readonly" :disabled="busy" class="btn-soft w-full" @click="post('/api/day/reopen')">
         <Spinner v-if="busy" />
         Вернуться к работе
       </button>
     </div>
 
-    <section v-if="data?.day.id" class="mt-8 rounded-lg border border-black/10 p-4 dark:border-white/15">
+    <section v-if="data?.day.id" class="card card-pad mt-6">
       <h2 class="mb-3 font-medium">Обсуждение дня</h2>
       <CommentThread
         target-type="day"

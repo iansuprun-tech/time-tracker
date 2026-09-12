@@ -66,6 +66,7 @@ app/pages/            страницы: файл = адрес
   invite-[token].vue  страница приглашения, открыта без входа
   settings.vue        шаблоны мест и категорий, звуки таймера
 app/components/       WeekCalendar — неделя, DayBoard — общий экран дня, BlockItem и др.
+app/assets/css/       main.css — словарь экрана: .card, .field, .btn-primary, .muted
 app/composables/      useChimes — синтез звуков, useSoundSettings — настройки звуков
 app/middleware/       auth.global.ts — без сессии пускает только на вход и приглашение
 server/api/           HTTP-ручки
@@ -75,6 +76,17 @@ shared/utils/         код, общий для фронта и сервера
 
 Таблицы: `users`, `days`, `blocks`, `time_entries`, `notes`, `comments`,
 `friendships`, `invites`, `presets`.
+
+## Как это выглядит
+
+Слева — тёмно-зелёная боковая панель с разделами, справа — карточки на светлом
+(или тёмном, по настройке системы) фоне. На узком экране панель ложится полосой
+сверху, а имя и «выйти» уезжают в шапку контента.
+
+Повторяющиеся куски оформления собраны в `app/assets/css/main.css`
+(`.card`, `.field`, `.btn-primary`, `.btn-soft`, `.btn-quiet`, `.chip`, `.muted`,
+`.page`, `.page-title`) — иначе половина страниц тихо расходится с остальными
+при первой же правке. Акцент везде один — emerald.
 
 ## Календарь недели
 

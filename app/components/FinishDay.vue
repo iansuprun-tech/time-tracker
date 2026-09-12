@@ -29,7 +29,7 @@ async function finish() {
 </script>
 
 <template>
-  <section class="rounded-lg border border-black/10 p-4 dark:border-white/15">
+  <section class="card card-pad">
     <h2 class="mb-3 font-medium">Как прошёл день?</h2>
 
     <div class="mb-3 flex gap-2">
@@ -37,7 +37,7 @@ async function finish() {
         v-for="m in MOODS"
         :key="m.value"
         :title="m.label"
-        class="flex-1 rounded border py-2 text-xl transition"
+        class="flex-1 rounded-lg border py-2 text-xl transition"
         :class="
           mood === m.value
             ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
@@ -53,12 +53,12 @@ async function finish() {
       v-model="dayNote"
       rows="3"
       placeholder="что запомнилось, что мешало, что понял"
-      class="mb-3 w-full rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+      class="field mb-3 w-full"
     />
 
     <button
       :disabled="busy"
-      class="inline-flex w-full items-center justify-center gap-2 rounded bg-black px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+      class="btn-primary w-full py-3"
       @click="finish"
     >
       <Spinner v-if="busy" />

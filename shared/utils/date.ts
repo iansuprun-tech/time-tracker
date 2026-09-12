@@ -39,3 +39,21 @@ export function hhmmToMin(value: string | null | undefined) {
 export function minToHhmm(min: number) {
   return `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(Math.round(min) % 60).padStart(2, "0")}`;
 }
+
+const MONTHS_GEN = [
+  "января", "февраля", "марта", "апреля", "мая", "июня",
+  "июля", "августа", "сентября", "октября", "ноября", "декабря",
+];
+
+/** «2026-09-12» → «12 сентября 2026»: дата на экране читается, а не расшифровывается */
+export function formatHuman(date: string, withYear = true) {
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return date;
+  return `${d} ${MONTHS_GEN[m - 1]}${withYear ? ` ${y}` : ""}`;
+}
+
+/** Понедельник → «ПН» и т. п. */
+export function weekdayShort(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  return ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"][new Date(y!, m! - 1, d!).getDay()]!;
+}

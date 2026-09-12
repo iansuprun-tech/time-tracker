@@ -36,21 +36,21 @@ async function copyFromToday() {
 </script>
 
 <template>
-  <main class="mx-auto max-w-2xl px-4 py-8">
+  <main class="page">
     <header class="mb-6 flex items-baseline justify-between">
       <div>
-        <h1 class="text-xl font-semibold">План на завтра</h1>
-        <p class="text-sm text-black/50 dark:text-white/50">
-          {{ date }} · {{ blocks.length }} блоков · {{ plannedMin }}м
+        <h1 class="page-title">План на завтра</h1>
+        <p class="mt-1 text-sm muted">
+          {{ formatHuman(date) }} · {{ blocks.length }} блоков · {{ plannedMin }}м
         </p>
       </div>
-      <NuxtLink to="/day" class="text-sm underline underline-offset-4">← Сегодня</NuxtLink>
+      <NuxtLink to="/day" class="btn-soft">← Сегодня</NuxtLink>
     </header>
 
     <button
       v-if="canCopy"
       :disabled="copying"
-      class="mb-4 inline-flex w-full items-center justify-center gap-2 rounded border border-dashed border-black/20 px-4 py-3 text-sm text-black/60 disabled:opacity-50 dark:border-white/25 dark:text-white/60"
+      class="btn-soft mb-4 w-full border-dashed py-3"
       @click="copyFromToday"
     >
       <Spinner v-if="copying" />
@@ -72,12 +72,17 @@ async function copyFromToday() {
       />
     </ul>
 
-    <p v-if="!blocks.length && !canCopy" class="py-6 text-center text-sm text-black/40 dark:text-white/40">
-      Завтра пока пусто.
-    </p>
-
-    <div class="mt-4">
-      <AddBlock :date="date" hint="что делаем завтра" @added="refresh" />
+    <div v-if="!blocks.length" class="card card-pad py-10 text-center">
+      <svg viewBox="0 0 24 24" class="mx-auto size-7 text-black/20 dark:text-white/20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+      </svg>
+      <p class="mt-2 text-sm font-medium">Завтра пока пусто</p>
+      <p class="text-sm muted">План на завтра пишется сегодня — так утро начинается без раскачки.</p>
     </div>
+
+    <section class="card card-pad mt-4">
+      <h2 class="mb-3 text-sm font-medium">Добавить блок</h2>
+      <AddBlock :date="date" hint="что делаем завтра" @added="refresh" />
+    </section>
   </main>
 </template>

@@ -78,20 +78,20 @@ const remove = (id: number) =>
 </script>
 
 <template>
-  <main class="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-    <h1 class="mb-6 text-xl font-semibold">Друзья</h1>
+  <main class="page">
+    <h1 class="page-title mb-6">Друзья</h1>
 
-    <section class="mb-6 rounded-lg border border-black/10 p-4 dark:border-white/15">
+    <section class="card card-pad mb-6">
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-sm font-medium">Пригласить по ссылке</h2>
-          <p class="text-xs text-black/50 dark:text-white/50">
+          <p class="text-xs muted">
             Одноразовая, живёт 7 дней. Регистрироваться заранее не нужно.
           </p>
         </div>
         <button
           :disabled="creating"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-60"
+          class="btn-primary shrink-0"
           @click="createInvite"
         >
           <Spinner v-if="creating" />
@@ -103,11 +103,11 @@ const remove = (id: number) =>
         <input
           :value="inviteUrl"
           readonly
-          class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+          class="field flex-1 py-1 text-xs"
           @focus="($event.target as HTMLInputElement).select()"
         />
         <button
-          class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+          class="btn-soft shrink-0 px-2 py-1 text-xs"
           @click="copyInvite"
         >
           {{ inviteCopied ? "скопировано" : "копировать" }}
@@ -115,23 +115,25 @@ const remove = (id: number) =>
       </div>
     </section>
 
-    <h2 class="mb-2 text-sm font-medium">Добавить по почте</h2>
-    <form class="mb-2 flex gap-2" @submit.prevent="request">
+    <section class="card card-pad mb-6">
+      <h2 class="mb-2 text-sm font-medium">Добавить по почте</h2>
+      <form class="flex gap-2" @submit.prevent="request">
       <input
         v-model="email"
         type="email"
         placeholder="почта коллеги"
-        class="flex-1 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+        class="field flex-1"
       />
       <button
         :disabled="sending"
-        class="inline-flex items-center gap-1.5 rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-60 dark:bg-white dark:text-black"
+        class="btn-primary"
       >
         <Spinner v-if="sending" />
         Добавить
       </button>
-    </form>
-    <p v-if="message" class="mb-6 text-sm text-black/60 dark:text-white/60">{{ message }}</p>
+      </form>
+      <p v-if="message" class="mt-2 text-sm muted">{{ message }}</p>
+    </section>
 
     <section v-if="data?.incoming.length" class="mb-6">
       <h2 class="mb-2 text-sm font-medium">Входящие заявки</h2>
@@ -139,12 +141,12 @@ const remove = (id: number) =>
         <li
           v-for="f in data.incoming"
           :key="f.id"
-          class="flex items-center gap-3 rounded-lg border border-black/10 p-3 text-sm dark:border-white/15"
+          class="card flex items-center gap-3 p-3 text-sm"
         >
-          <span class="flex-1">{{ f.name }} <span class="text-black/40 dark:text-white/40">{{ f.email }}</span></span>
+          <span class="flex-1">{{ f.name }} <span class="muted">{{ f.email }}</span></span>
           <button
             :disabled="busy"
-            class="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-60"
+            class="btn-primary px-3 py-1 text-xs"
             @click="respond(f.id, true)"
           >
             <Spinner v-if="acting === 'respond:' + f.id" />
@@ -152,7 +154,7 @@ const remove = (id: number) =>
           </button>
           <button
             :disabled="busy"
-            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-3 py-1 text-xs disabled:opacity-60 dark:border-white/20"
+            class="btn-soft px-3 py-1 text-xs"
             @click="respond(f.id, false)"
           >
             <Spinner v-if="acting === 'respond:' + f.id" />
@@ -168,20 +170,20 @@ const remove = (id: number) =>
         <li
           v-for="f in data.friends"
           :key="f.id"
-          class="flex items-center gap-3 rounded-lg border border-black/10 p-3 text-sm dark:border-white/15"
+          class="card flex items-center gap-3 p-3 text-sm"
         >
           <NuxtLink :to="`/u-${f.userId}`" class="flex-1 underline underline-offset-4">
             {{ f.name }}
           </NuxtLink>
           <NuxtLink
             :to="{ path: '/', query: { userId: f.userId } }"
-            class="text-xs text-black/50 underline underline-offset-4 dark:text-white/50"
+            class="btn-soft px-2 py-1 text-xs"
           >
             неделя
           </NuxtLink>
           <button
             :disabled="busy"
-            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-3 py-1 text-xs disabled:opacity-60 dark:border-white/20"
+            class="btn-soft px-3 py-1 text-xs"
             @click="remove(f.id)"
           >
             <Spinner v-if="acting === 'remove:' + f.id" />
@@ -189,7 +191,7 @@ const remove = (id: number) =>
           </button>
         </li>
       </ul>
-      <p v-else class="text-sm text-black/40 dark:text-white/40">
+      <p v-else class="text-sm muted">
         Пока никого. Добавьте коллегу по почте — после подтверждения увидите его дни.
       </p>
     </section>

@@ -101,28 +101,19 @@ async function submit() {
 </script>
 
 <template>
-  <form class="space-y-2" @submit.prevent="submit">
+  <form class="space-y-3" @submit.prevent="submit">
     <div class="flex flex-wrap gap-2">
-      <input
-        v-model="title"
-        :placeholder="hint"
-        class="min-w-40 flex-1 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-      />
+      <input v-model="title" :placeholder="hint" class="field min-w-44 flex-1" />
       <input
         v-model="category"
         list="known-categories"
         placeholder="категория"
-        class="w-28 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+        class="field w-32"
       />
       <datalist id="known-categories">
         <option v-for="c in categoryOptions" :key="c" :value="c" />
       </datalist>
-      <input
-        v-model="location"
-        list="known-places"
-        placeholder="место"
-        class="w-28 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-      />
+      <input v-model="location" list="known-places" placeholder="место" class="field w-32" />
       <datalist id="known-places">
         <option v-for="pl in placeOptions" :key="pl" :value="pl" />
       </datalist>
@@ -133,56 +124,47 @@ async function submit() {
         min="0"
         step="5"
         placeholder="мин"
-        class="w-20 rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+        class="field w-20"
       />
-      <button
-        :disabled="saving"
-        class="inline-flex items-center justify-center rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-      >
+      <button :disabled="saving" class="btn-primary w-10 px-0" aria-label="Добавить блок">
         <Spinner v-if="saving" />
         <template v-else>+</template>
       </button>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 text-xs">
-      <div class="inline-flex rounded border border-black/15 p-0.5 dark:border-white/20">
+      <div class="inline-flex rounded-lg bg-black/[0.05] p-0.5 dark:bg-white/10">
         <button
           v-for="k in (['online', 'offline'] as const)"
           :key="k"
           type="button"
-          class="rounded px-2 py-1"
+          class="rounded-md px-2.5 py-1 transition-colors"
           :class="
             kind === k
-              ? 'bg-black font-medium text-white dark:bg-white dark:text-black'
-              : 'text-black/60 dark:text-white/60'
+              ? 'bg-white font-medium text-emerald-700 shadow-sm dark:bg-neutral-800 dark:text-emerald-400'
+              : 'text-black/55 dark:text-white/55'
           "
           @click="pick(k)"
         >
-          {{ k === "online" ? "онлайн" : "офлайн" }}
+          {{ k === "online" ? "Онлайн" : "Офлайн" }}
         </button>
       </div>
 
-      <label class="flex items-center gap-1 text-black/55 dark:text-white/55">
-        с
-        <input
-          v-model="startAt"
-          type="time"
-          step="300"
-          class="rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
-        />
-      </label>
-      <label class="flex items-center gap-1 text-black/55 dark:text-white/55">
-        по
-        <input
-          v-model="endAt"
-          type="time"
-          step="300"
-          class="rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
-        />
-      </label>
+      <input v-model="startAt" type="time" step="300" class="field px-2 py-1" />
+      <span class="muted">—</span>
+      <input v-model="endAt" type="time" step="300" class="field px-2 py-1" />
 
-      <span v-if="error" class="text-red-600 dark:text-red-400">{{ error }}</span>
-      <span v-else class="text-black/40 dark:text-white/40">{{ hint2 }}</span>
+      <button
+        v-if="startAt || endAt"
+        type="button"
+        class="btn-quiet"
+        @click="startAt = ''; endAt = ''"
+      >
+        убрать время
+      </button>
     </div>
+
+    <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>
+    <p v-else class="text-xs muted">{{ hint2 }}</p>
   </form>
 </template>

@@ -291,28 +291,30 @@ function openDay(date: string) {
 </script>
 
 <template>
-  <main class="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-    <header class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-      <h1 class="text-xl font-semibold">
-        {{ data?.readonly ? data?.owner?.name : "Моя неделя" }}
-        <span class="text-base font-normal text-black/40 dark:text-white/40">
-          · {{ weekMinutes ? hm(weekMinutes) : "пусто" }}
-        </span>
-      </h1>
-      <div class="flex items-center gap-2 text-sm">
-        <button class="px-2 text-black/50 dark:text-white/50" @click="shiftWeek(-1)">←</button>
-        <span>{{ title }}</span>
-        <button class="px-2 text-black/50 dark:text-white/50" @click="shiftWeek(1)">→</button>
-        <button
-          class="ml-2 rounded border border-black/15 px-2 py-1 text-xs text-black/60 dark:border-white/20 dark:text-white/60"
-          @click="router.push({ query: { ...(ownerId ? { userId: String(ownerId) } : {}) } })"
-        >
-          Сегодня
-        </button>
+  <main class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="page-title">{{ data?.readonly ? data?.owner?.name : "Календарь" }}</h1>
+        <div class="mt-1 flex items-center gap-1 text-sm muted">
+          <span>{{ title }}</span>
+          <button class="btn-quiet px-1.5" aria-label="Прошлая неделя" @click="shiftWeek(-1)">‹</button>
+          <button class="btn-quiet px-1.5" aria-label="Следующая неделя" @click="shiftWeek(1)">›</button>
+          <button
+            class="btn-quiet"
+            @click="router.push({ query: { ...(ownerId ? { userId: String(ownerId) } : {}) } })"
+          >
+            сегодня
+          </button>
+        </div>
+      </div>
+
+      <div class="text-right">
+        <div class="text-[11px] uppercase tracking-wide muted">за неделю</div>
+        <div class="font-medium tabular-nums">{{ weekMinutes ? hm(weekMinutes) : "—" }}</div>
       </div>
     </header>
 
-    <div class="overflow-x-auto">
+    <div class="card overflow-x-auto p-3 sm:p-4">
       <div class="min-w-[760px]">
         <!-- шапка: числа недели -->
         <div class="grid" style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr))">
@@ -320,10 +322,10 @@ function openDay(date: string) {
           <button
             v-for="(c, i) in columns"
             :key="c.date"
-            class="border-b border-black/10 pb-2 text-center dark:border-white/15"
+            class="rounded-lg border-b border-black/5 pb-2 text-center transition-colors hover:bg-black/[0.03] dark:border-white/10 dark:hover:bg-white/5"
             @click="openDay(c.date)"
           >
-            <div class="text-[11px] tracking-wider text-black/40 dark:text-white/40">
+            <div class="text-[11px] tracking-wider muted">
               {{ WEEKDAYS[i] }}
             </div>
             <div
@@ -336,7 +338,7 @@ function openDay(date: string) {
             >
               {{ dayNum(c.date) }}
             </div>
-            <div class="h-4 text-[11px] text-black/40 dark:text-white/40">
+            <div class="h-4 text-[11px] muted">
               {{ c.minutes ? hm(c.minutes) : "" }}
             </div>
           </button>
@@ -349,7 +351,7 @@ function openDay(date: string) {
             <div
               v-for="h in hours"
               :key="h"
-              class="absolute right-2 -translate-y-1/2 text-[11px] text-black/40 dark:text-white/40"
+              class="absolute right-2 -translate-y-1/2 text-[11px] muted"
               :style="{ top: `${(h - bounds.start) * HOUR_PX}px` }"
             >
               {{ h }}:00
@@ -359,7 +361,7 @@ function openDay(date: string) {
           <div
             v-for="c in columns"
             :key="c.date"
-            class="relative border-l border-black/10 dark:border-white/15"
+            class="relative border-l border-black/5 dark:border-white/10"
             :style="{ height: `${gridHeight}px` }"
           >
             <!-- часовые линии -->
@@ -396,7 +398,7 @@ function openDay(date: string) {
             <button
               v-for="s in c.items"
               :key="s.key"
-              class="absolute z-10 overflow-hidden rounded px-1.5 py-0.5 text-left text-[11px] leading-tight text-white shadow-sm transition-colors"
+              class="absolute z-10 overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-white shadow-sm transition-colors"
               :class="[
                 colorOf(s),
                 s.status === 'dropped' ? 'opacity-50 line-through' : '',
@@ -423,15 +425,15 @@ function openDay(date: string) {
         <!-- блоку без длительности и без окна в сетке места нет -->
         <div
           v-if="loose.length"
-          class="mt-2 grid border-t border-black/10 pt-2 dark:border-white/15"
+          class="mt-2 grid border-t border-black/5 pt-2 dark:border-white/10"
           style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr))"
         >
-          <div class="pr-2 text-right text-[11px] text-black/40 dark:text-white/40">без<br />времени</div>
+          <div class="pr-2 text-right text-[11px] muted">без<br />времени</div>
           <div v-for="c in columns" :key="c.date" class="space-y-1 px-1">
             <button
               v-for="b in c.loose"
               :key="b.id"
-              class="block w-full truncate rounded border border-dashed border-black/20 px-1.5 py-0.5 text-left text-[11px] text-black/50 dark:border-white/25 dark:text-white/50"
+              class="block w-full truncate rounded-md border border-dashed border-black/15 px-1.5 py-0.5 text-left text-[11px] muted hover:bg-black/[0.03] dark:border-white/20 dark:hover:bg-white/5"
               :title="b.title"
               @click="openDay(c.date)"
             >
@@ -442,8 +444,8 @@ function openDay(date: string) {
       </div>
     </div>
 
-    <p v-if="!pieces.length" class="py-6 text-center text-sm text-black/40 dark:text-white/40">
-      На этой неделе таймер не запускался.
+    <p v-if="!pieces.length && !plans.length" class="mt-4 text-center text-sm muted">
+      На этой неделе ещё ничего не запланировано.
     </p>
   </main>
 </template>

@@ -59,16 +59,25 @@ async function submit() {
 </script>
 
 <template>
-  <main class="mx-auto max-w-sm px-4 py-16">
+  <main class="mx-auto flex w-full max-w-sm flex-col justify-center px-4 py-16">
+    <div class="mb-6 flex items-center justify-center gap-2.5">
+      <svg viewBox="0 0 24 24" class="size-7 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3.5 2" />
+      </svg>
+      <span class="text-lg font-semibold tracking-tight">Трекер дня</span>
+    </div>
+
+    <div class="card card-pad">
     <template v-if="broken">
-      <h1 class="mb-2 text-xl font-semibold">Ссылка не работает</h1>
-      <p class="mb-6 text-sm text-black/60 dark:text-white/60">{{ brokenReason }}</p>
+      <h1 class="mb-2 text-lg font-semibold">Ссылка не работает</h1>
+      <p class="mb-4 text-sm muted">{{ brokenReason }}</p>
       <NuxtLink to="/" class="underline underline-offset-4">На главную</NuxtLink>
     </template>
 
     <template v-else>
-      <h1 class="mb-2 text-xl font-semibold">{{ info?.inviterName }} приглашает вас</h1>
-      <p class="mb-6 text-sm text-black/60 dark:text-white/60">
+      <h1 class="mb-2 text-lg font-semibold">{{ info?.inviterName }} приглашает вас</h1>
+      <p class="mb-4 text-sm muted">
         Вы сможете видеть дни друг друга и оставлять комментарии.
       </p>
 
@@ -78,21 +87,21 @@ async function submit() {
             v-if="!hasAccount"
             v-model="name"
             placeholder="имя"
-            class="w-full rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            class="field w-full"
           />
           <input
             v-model="email"
             type="email"
             autocomplete="email"
             placeholder="почта"
-            class="w-full rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            class="field w-full"
           />
           <input
             v-model="password"
             type="password"
             :autocomplete="hasAccount ? 'current-password' : 'new-password'"
             :placeholder="hasAccount ? 'пароль' : 'пароль, минимум 8 символов'"
-            class="w-full rounded border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            class="field w-full"
           />
         </template>
 
@@ -100,17 +109,18 @@ async function submit() {
 
         <button
           :disabled="busy"
-          class="w-full rounded bg-emerald-600 px-4 py-3 font-medium text-white disabled:opacity-50"
+          class="btn-primary w-full py-3"
         >
           {{ loggedIn ? "Принять приглашение" : hasAccount ? "Войти и принять" : "Создать аккаунт и принять" }}
         </button>
       </form>
 
-      <p v-if="!loggedIn" class="mt-4 text-sm text-black/50 dark:text-white/50">
+      <p v-if="!loggedIn" class="mt-4 text-sm muted">
         <button class="underline underline-offset-4" @click="hasAccount = !hasAccount">
           {{ hasAccount ? "У меня ещё нет аккаунта" : "У меня уже есть аккаунт" }}
         </button>
       </p>
     </template>
+    </div>
   </main>
 </template>

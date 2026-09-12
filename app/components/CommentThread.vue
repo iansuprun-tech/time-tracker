@@ -59,7 +59,7 @@ async function submit() {
       >
         <div class="flex items-baseline gap-2">
           <span class="font-medium">{{ c.authorName }}</span>
-          <span class="text-[11px] text-black/40 dark:text-white/40">{{ when(c.createdAt) }}</span>
+          <span class="text-[11px] muted">{{ when(c.createdAt) }}</span>
         </div>
         <p class="whitespace-pre-wrap">{{ c.text }}</p>
       </li>
@@ -69,11 +69,11 @@ async function submit() {
       <input
         v-model="text"
         placeholder="комментарий"
-        class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
+        class="field flex-1 py-1"
       />
       <button
         :disabled="busy"
-        class="inline-flex items-center gap-1.5 rounded border border-black/15 px-2 py-1 disabled:opacity-50 dark:border-white/20"
+        class="btn-soft px-2 py-1"
       >
         <Spinner v-if="busy" />
         ок

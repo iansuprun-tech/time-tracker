@@ -16,8 +16,8 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
 </script>
 
 <template>
-  <main class="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-    <h1 class="mb-6 text-xl font-semibold">Настройки</h1>
+  <main class="page">
+    <h1 class="page-title mb-6">Настройки</h1>
 
     <div class="mb-8 space-y-4">
       <PresetList
@@ -37,13 +37,13 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
     </div>
 
     <h2 class="mb-1 text-lg font-semibold">Звуки таймера</h2>
-    <p class="mb-6 text-sm text-black/50 dark:text-white/50">
+    <p class="mb-6 text-sm muted">
       Звучит только на своём начатом дне и только пока вкладка открыта. Настройки живут в этом браузере.
     </p>
 
     <ClientOnly>
       <div class="space-y-6">
-        <div class="rounded-lg border border-black/10 p-4 dark:border-white/15">
+        <div class="card card-pad">
           <label class="flex items-center gap-2 text-sm">
             <input v-model="settings.enabled" type="checkbox" class="size-4" />
             <span class="font-medium">Звук включён</span>
@@ -67,7 +67,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
               <button
                 type="button"
                 :disabled="!settings.enabled"
-                class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+                class="btn-soft px-2 py-1 text-xs"
                 @click="preview('chime')"
               >
                 проверить
@@ -80,7 +80,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
           <li
             v-for="e in CHIME_EVENTS"
             :key="e.id"
-            class="rounded-lg border border-black/10 p-3 dark:border-white/15"
+            class="card p-3"
           >
             <div class="flex flex-wrap items-center gap-2">
               <label class="flex flex-1 items-center gap-2 text-sm">
@@ -96,7 +96,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
               <select
                 v-model="settings.events[e.id].sound"
                 :disabled="!settings.enabled"
-                class="rounded border border-black/15 bg-transparent px-2 py-1 text-sm dark:border-white/20"
+                class="field py-1"
               >
                 <option v-for="s in SOUNDS" :key="s.id" :value="s.id">{{ s.label }}</option>
               </select>
@@ -104,7 +104,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
               <button
                 type="button"
                 :disabled="!settings.enabled"
-                class="rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+                class="btn-soft px-2 py-1 text-xs"
                 @click="preview(settings.events[e.id].sound)"
               >
                 ▶
@@ -122,7 +122,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
                 max="120"
                 step="5"
                 :disabled="!settings.enabled"
-                class="w-16 rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                class="field w-16 px-2 py-0.5"
               />
               <span v-if="MINUTE_FIELD[e.id]">мин</span>
 

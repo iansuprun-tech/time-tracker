@@ -22,18 +22,18 @@ async function copy() {
 </script>
 
 <template>
-  <section class="rounded-lg border border-black/10 p-4 dark:border-white/15">
+  <section class="card card-pad">
     <div class="mb-3 flex items-center justify-between">
       <h2 class="font-medium">Сводка для стендапа</h2>
       <button
-        class="rounded border border-black/15 px-3 py-1 text-xs dark:border-white/20"
+        class="btn-soft px-3 py-1 text-xs"
         @click="copy"
       >
         {{ copied ? "скопировано" : "копировать" }}
       </button>
     </div>
     <pre
-      class="overflow-x-auto rounded bg-black/[0.03] p-3 text-xs leading-relaxed whitespace-pre-wrap dark:bg-white/5"
+      class="overflow-x-auto rounded-lg bg-black/[0.03] p-3 text-xs leading-relaxed whitespace-pre-wrap dark:bg-white/5"
       >{{ data?.text }}</pre
     >
   </section>

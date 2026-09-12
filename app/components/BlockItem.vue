@@ -199,11 +199,9 @@ async function saveNote() {
 <template>
   <li
     :data-block-id="block.id"
-    class="rounded-lg border p-3"
+    class="card p-3 transition-colors"
     :class="[
-      running
-        ? 'border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20'
-        : 'border-black/10 dark:border-white/15',
+      running ? 'bg-emerald-50/70 ring-1 ring-emerald-500/50 dark:bg-emerald-950/20' : '',
       block.status === 'done' || block.status === 'dropped' ? 'opacity-60' : '',
       dragging ? 'opacity-70 ring-2 ring-emerald-500/50' : '',
     ]"
@@ -228,25 +226,25 @@ async function saveNote() {
               </span>
               <span
                 v-if="block.category"
-                class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
+                class="chip"
               >
                 {{ block.category }}
               </span>
               <span
                 v-if="block.location"
-                class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60"
+                class="chip"
               >
                 📍 {{ block.location }}
               </span>
               <span
                 v-if="offline"
-                class="rounded bg-black/5 px-1.5 py-0.5 text-[11px] text-black/50 dark:bg-white/10 dark:text-white/50"
+                class="chip"
               >
                 офлайн
               </span>
               <span
                 v-if="block.isUnplanned"
-                class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
+                class="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
               >
                 вне плана
               </span>
@@ -261,19 +259,16 @@ async function saveNote() {
                   v-model="fromAt"
                   type="time"
                   step="300"
-                  class="rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                  class="field px-2 py-0.5"
                 />
                 –
                 <input
                   v-model="toAt"
                   type="time"
                   step="300"
-                  class="rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                  class="field px-2 py-0.5"
                 />
-                <button
-                  :disabled="busy"
-                  class="inline-flex items-center gap-1 rounded border border-black/15 px-1.5 py-0.5 disabled:opacity-60 dark:border-white/20"
-                >
+                <button :disabled="busy" class="btn-soft px-2 py-0.5 text-xs">
                   <Spinner v-if="busy" />
                   ок
                 </button>
@@ -324,12 +319,9 @@ async function saveNote() {
                   min="0"
                   step="5"
                   autofocus
-                  class="w-16 rounded border border-black/15 bg-transparent px-1 py-0.5 dark:border-white/20"
+                  class="field w-16 px-2 py-0.5"
                 />
-                <button
-                  :disabled="busy"
-                  class="inline-flex items-center gap-1 rounded border border-black/15 px-1.5 py-0.5 disabled:opacity-60 dark:border-white/20"
-                >
+                <button :disabled="busy" class="btn-soft px-2 py-0.5 text-xs">
                   <Spinner v-if="busy" />
                   ок
                 </button>
@@ -358,7 +350,7 @@ async function saveNote() {
                 v-if="editable"
                 :value="block.status"
                 :disabled="busy"
-                class="rounded border border-black/10 bg-transparent px-1 py-0.5 disabled:opacity-50 dark:border-white/15"
+                class="field px-2 py-0.5 text-xs disabled:opacity-50"
                 @change="patch({ status: ($event.target as HTMLSelectElement).value })"
               >
                 <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
@@ -377,8 +369,8 @@ async function saveNote() {
             <button
               v-if="block.status !== 'done' && !offline"
               :disabled="busy"
-              class="inline-flex min-w-14 items-center justify-center gap-1.5 rounded px-2 py-2 text-xs disabled:opacity-60 sm:py-1"
-              :class="running ? 'border border-black/15 dark:border-white/20' : 'bg-emerald-600 text-white'"
+              class="min-w-16 text-xs"
+              :class="running ? 'btn-soft' : 'btn-primary'"
               @click="running ? stopTimer() : startTimer()"
             >
               <Spinner v-if="busy" />
@@ -386,14 +378,14 @@ async function saveNote() {
             </button>
             <button
               :disabled="busy"
-              class="inline-flex items-center justify-center rounded border border-black/15 px-3 py-2 text-xs disabled:opacity-60 dark:border-white/20 sm:px-2 sm:py-1"
+              class="btn-soft px-3 text-xs"
               @click="toggleDone"
             >
               <Spinner v-if="busy" />
               <template v-else>{{ block.status === "done" ? "↺" : "✓" }}</template>
             </button>
             <button
-              class="rounded border border-black/15 px-3 py-2 text-xs dark:border-white/20 sm:px-2 sm:py-1"
+              class="btn-soft px-3 text-xs"
               @click="noteOpen = !noteOpen"
             >
               +заметка
@@ -403,7 +395,7 @@ async function saveNote() {
           <button
             v-else-if="mode === 'plan'"
             :disabled="busy"
-            class="inline-flex shrink-0 items-center justify-center rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-60 dark:border-white/20"
+            class="btn-soft shrink-0 px-2 py-1 text-xs"
             @click="remove"
           >
             <Spinner v-if="busy" />
@@ -412,7 +404,7 @@ async function saveNote() {
 
           <button
             v-else
-            class="shrink-0 rounded border border-black/15 px-2 py-1 text-xs dark:border-white/20"
+            class="btn-soft shrink-0 px-2 py-1 text-xs"
             @click="commentsOpen = !commentsOpen"
           >
             💬<span v-if="commentCount"> {{ commentCount }}</span>
@@ -434,12 +426,9 @@ async function saveNote() {
             v-model="noteText"
             autofocus
             placeholder="что происходит по этому блоку"
-            class="flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+            class="field flex-1 py-1 text-xs"
           />
-          <button
-            :disabled="busy"
-            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-60 dark:border-white/20"
-          >
+          <button :disabled="busy" class="btn-soft px-2 py-1 text-xs">
             <Spinner v-if="busy" />
             ок
           </button>

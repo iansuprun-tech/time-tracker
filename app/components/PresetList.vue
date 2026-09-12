@@ -60,7 +60,7 @@ const remove = (id: number) =>
 </script>
 
 <template>
-  <section class="rounded-lg border border-black/10 p-4 dark:border-white/15">
+  <section class="card card-pad">
     <h2 class="font-medium">{{ title }}</h2>
     <p class="mt-0.5 text-xs text-black/50 dark:text-white/50">{{ hint }}</p>
 
@@ -70,11 +70,11 @@ const remove = (id: number) =>
           <input
             v-model="draft"
             autofocus
-            class="min-w-0 flex-1 rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
+            class="field min-w-0 flex-1 py-1"
           />
           <button
             :disabled="busy"
-            class="inline-flex items-center gap-1.5 rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-60 dark:border-white/20"
+            class="btn-soft px-2 py-1 text-xs"
           >
             <Spinner v-if="busy" />
             ок
@@ -98,7 +98,7 @@ const remove = (id: number) =>
           </button>
           <button
             :disabled="busy"
-            class="rounded border border-black/15 px-2 py-1 text-xs disabled:opacity-60 dark:border-white/20"
+            class="btn-soft px-2 py-1 text-xs"
             @click="remove(item.id)"
           >
             ✕
@@ -113,11 +113,11 @@ const remove = (id: number) =>
       <input
         v-model="adding"
         placeholder="добавить"
-        class="min-w-0 flex-1 rounded border border-black/15 bg-transparent px-2 py-1 text-sm dark:border-white/20"
+        class="field min-w-0 flex-1 py-1"
       />
       <button
         :disabled="busy"
-        class="inline-flex items-center gap-1.5 rounded border border-black/15 px-3 py-1 text-sm disabled:opacity-60 dark:border-white/20"
+        class="btn-soft px-3 py-1"
       >
         <Spinner v-if="busy" />
         +

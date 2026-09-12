@@ -21,7 +21,7 @@ async function resolve() {
 </script>
 
 <template>
-  <div class="rounded-lg border border-amber-500/50 bg-amber-50 p-3 text-sm dark:bg-amber-950/20">
+  <div class="rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm shadow-sm dark:bg-amber-950/20">
     <p class="mb-2">
       Таймер по «{{ title }}» идёт {{ hours }} ч — похоже, его забыли остановить. Сколько было на самом деле?
     </p>
@@ -31,11 +31,11 @@ async function resolve() {
         type="number"
         min="0"
         step="5"
-        class="w-24 rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20"
+        class="field w-24 py-1"
       />
       <button
         :disabled="busy"
-        class="inline-flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1 text-white disabled:opacity-50"
+        class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1 font-medium text-white transition-colors hover:bg-amber-500 disabled:opacity-50"
       >
         <Spinner v-if="busy" />
         минут

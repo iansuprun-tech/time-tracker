@@ -129,6 +129,23 @@ export const comments = pgTable(
   (t) => [index("comments_target_idx").on(t.targetType, t.targetId)],
 );
 
+/**
+ * Сброс пароля по ссылке из письма.
+ * В базе лежит хеш токена, а не он сам: утечка таблицы не должна давать вход.
+ */
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+  },
+  (t) => [index("password_resets_token_idx").on(t.tokenHash)],
+);
+
 /** Приглашение по ссылке: одноразовое, со сроком жизни */
 export const invites = pgTable("invites", {
   id: serial("id").primaryKey(),

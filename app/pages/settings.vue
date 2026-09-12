@@ -34,6 +34,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
         :items="presets?.places ?? []"
         :reload="reload"
       />
+      <ChangePassword />
     </div>
 
     <h2 class="mb-1 text-lg font-semibold">Звуки таймера</h2>

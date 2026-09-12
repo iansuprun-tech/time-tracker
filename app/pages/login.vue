@@ -65,6 +65,7 @@ async function submit() {
     <p class="mt-4 text-sm muted">
       Нет аккаунта?
       <NuxtLink to="/register" class="underline underline-offset-4">Зарегистрироваться</NuxtLink>
+      · <NuxtLink to="/forgot" class="underline underline-offset-4">Забыли пароль?</NuxtLink>
     </p>
   </main>
 </template>

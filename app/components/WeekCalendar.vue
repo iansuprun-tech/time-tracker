@@ -86,14 +86,14 @@ const pieces = computed(() => {
   }
 
   // офлайн-задача таймером не тикает: её окно и есть факт
-  for (const b of data.value?.planned ?? []) {
-    if (b.kind !== "offline") continue;
+  for (const b of data.value?.blocks ?? []) {
+    if (b.kind !== "offline" || b.plannedStartMin == null || b.plannedEndMin == null) continue;
     out.push({
       key: `b${b.id}`,
       blockId: b.id,
       date: b.date,
-      from: b.startMin,
-      to: b.endMin,
+      from: b.plannedStartMin,
+      to: b.plannedEndMin,
       title: b.title,
       category: b.category,
       location: b.location,
@@ -106,10 +106,38 @@ const pieces = computed(() => {
   return out.filter((s) => dates.value.includes(s.date));
 });
 
-/** Окно онлайн-задачи — намерение: контур позади факта, чтобы видеть расхождение */
-const plans = computed(() =>
-  (data.value?.planned ?? []).filter((p) => p.kind === "online" && dates.value.includes(p.date)),
-);
+type PlanSlot = Slot & { title: string; location: string | null; date: string };
+
+/**
+ * План по часам: фиксированные задачи стоят в своём окне, плавающие идут подряд
+ * от начала дня и обтекают их. Офлайн уже нарисован фактом, второй раз не рисуем.
+ */
+const plans = computed<PlanSlot[]>(() => {
+  const all = data.value?.blocks ?? [];
+  const out: PlanSlot[] = [];
+
+  for (const date of dates.value) {
+    const dayBlocks = all.filter((b) => b.date === date);
+    if (!dayBlocks.length) continue;
+
+    const startedAt = data.value?.days.find((d) => d.date === date)?.startedAt ?? null;
+    const slots = scheduleDay(dayBlocks, startedAt ? minutesOfDay(startedAt) : undefined);
+
+    for (const slot of slots) {
+      const block = dayBlocks.find((b) => b.id === slot.id)!;
+      if (block.kind === "offline") continue;
+      out.push({ ...slot, date, title: block.title, location: block.location });
+    }
+  }
+
+  return out;
+});
+
+/** Блок, которого нет ни в сетке, ни в факте: без окна, без длительности и без таймера */
+const loose = computed(() => {
+  const placed = new Set(plans.value.map((p) => p.id));
+  return (data.value?.blocks ?? []).filter((b) => !b.tracked && !placed.has(b.id));
+});
 
 /** Рабочий день по умолчанию 8–20, но сетка растягивается под то, что в ней есть */
 const bounds = computed(() => {
@@ -166,8 +194,9 @@ const columns = computed(() =>
       date,
       items,
       plans: plans.value.filter((p) => p.date === date),
+      loose: loose.value.filter((b) => b.date === date),
       minutes: items.reduce((sum, s) => sum + (s.to - s.from), 0),
-      untracked: (data.value?.untracked ?? []).filter((b) => b.date === date),
+
       dayStatus: data.value?.days.find((d) => d.date === date)?.status ?? null,
     };
   }),
@@ -185,7 +214,7 @@ function styleFor(s: Seg) {
   };
 }
 
-function planStyle(p: { startMin: number; endMin: number }) {
+function planStyle(p: Slot) {
   return {
     top: `${((p.startMin - bounds.value.start * 60) / 60) * HOUR_PX}px`,
     height: `${Math.max(14, ((p.endMin - p.startMin) / 60) * HOUR_PX - 2)}px`,
@@ -352,10 +381,16 @@ function openDay(date: string) {
             <div
               v-for="p in c.plans"
               :key="`p${p.id}`"
-              class="pointer-events-none absolute inset-x-1 overflow-hidden rounded border border-dashed border-black/25 px-1.5 py-0.5 text-[11px] leading-tight text-black/45 dark:border-white/30 dark:text-white/45"
+              class="pointer-events-none absolute inset-x-1 overflow-hidden rounded px-1.5 py-0.5 text-[11px] leading-tight"
+              :class="
+                p.fixed
+                  ? 'border border-black/35 text-black/55 dark:border-white/40 dark:text-white/55'
+                  : 'border border-dashed border-black/20 text-black/40 dark:border-white/25 dark:text-white/40'
+              "
               :style="planStyle(p)"
+              :title="`${p.title} · ${p.fixed ? 'фиксировано' : 'сдвинется'} ${minToHhmm(p.startMin)}–${minToHhmm(p.endMin)}`"
             >
-              {{ p.title }}
+              <span v-if="p.fixed">📌</span><span v-else>≈</span> {{ p.title }}
             </div>
 
             <button
@@ -385,16 +420,16 @@ function openDay(date: string) {
           </div>
         </div>
 
-        <!-- блоки, которые были в плане, но таймер по ним не шёл -->
+        <!-- блоку без длительности и без окна в сетке места нет -->
         <div
-          v-if="data?.untracked.length"
+          v-if="loose.length"
           class="mt-2 grid border-t border-black/10 pt-2 dark:border-white/15"
           style="grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr))"
         >
-          <div class="pr-2 text-right text-[11px] text-black/40 dark:text-white/40">без<br />таймера</div>
+          <div class="pr-2 text-right text-[11px] text-black/40 dark:text-white/40">без<br />времени</div>
           <div v-for="c in columns" :key="c.date" class="space-y-1 px-1">
             <button
-              v-for="b in c.untracked"
+              v-for="b in c.loose"
               :key="b.id"
               class="block w-full truncate rounded border border-dashed border-black/20 px-1.5 py-0.5 text-left text-[11px] text-black/50 dark:border-white/25 dark:text-white/50"
               :title="b.title"

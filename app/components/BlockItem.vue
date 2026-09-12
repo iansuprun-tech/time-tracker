@@ -34,6 +34,8 @@ const props = defineProps<{
   comments?: Comment[];
   /** обновление данных дня; ждём его, иначе кнопка оживает раньше, чем приедет ответ */
   reload: (part?: "day" | "comments") => Promise<void>;
+  /** расчётное место блока в дне: у плавающего оно едет вместе с днём */
+  slotPlan?: { startMin: number; endMin: number; fixed: boolean } | null;
   /** блок можно тащить за ручку, меняя порядок в списке */
   reorderable?: boolean;
   /** этот блок сейчас едет под рукой */
@@ -63,6 +65,12 @@ const hasWindow = computed(
 const windowLabel = computed(() =>
   hasWindow.value
     ? `${minToHhmm(props.block.plannedStartMin!)}–${minToHhmm(props.block.plannedEndMin!)}`
+    : null,
+);
+/** Плавающий блок своего времени не имеет — показываем, куда он встаёт по расчёту */
+const driftLabel = computed(() =>
+  !hasWindow.value && props.slotPlan
+    ? `≈ ${minToHhmm(props.slotPlan.startMin)}–${minToHhmm(props.slotPlan.endMin)}`
     : null,
 );
 const windowOpen = ref(false);
@@ -282,12 +290,22 @@ async function saveNote() {
               <button
                 v-else-if="mode !== 'view'"
                 class="underline decoration-dotted underline-offset-2"
+                :title="hasWindow ? 'время фиксировано: блок не сдвинется' : 'задать фиксированное время'"
                 @click="openWindow"
               >
-                {{ windowLabel ?? "+время" }}
+                <template v-if="windowLabel">📌 {{ windowLabel }}</template>
+                <template v-else>+время</template>
               </button>
 
-              <span v-else-if="windowLabel">{{ windowLabel }}</span>
+              <span v-else-if="windowLabel">📌 {{ windowLabel }}</span>
+
+              <span
+                v-if="driftLabel"
+                :title="'Расчётное время: блок идёт подряд и сдвинется вместе с днём'"
+                class="text-black/40 dark:text-white/40"
+              >
+                {{ driftLabel }}
+              </span>
 
               <span v-if="block.plannedMin != null && !hasWindow">план {{ block.plannedMin }}м</span>
 

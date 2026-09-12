@@ -39,6 +39,16 @@ function pick(next: "online" | "offline") {
   if (next === "offline" && !startAt.value && !endAt.value) suggestWindow();
 }
 
+/** Время указано — задача стоит колом; нет — плывёт вместе с днём */
+const hint2 = computed(() => {
+  if (!startAt.value || !endAt.value) {
+    return "без времени задача встанет подряд от начала дня и сдвинется вместе с ним";
+  }
+  return kind.value === "online"
+    ? "время фиксировано: блок не сдвинется, факт натикает таймером"
+    : "время фиксировано: таймер не нужен, окно и есть факт";
+});
+
 async function submit() {
   if (!title.value.trim() || saving.value) return;
 
@@ -172,13 +182,7 @@ async function submit() {
       </label>
 
       <span v-if="error" class="text-red-600 dark:text-red-400">{{ error }}</span>
-      <span v-else class="text-black/40 dark:text-white/40">
-        {{
-          kind === "online"
-            ? "время натикает таймером, окно — план"
-            : "таймер не нужен: окно и есть факт"
-        }}
-      </span>
+      <span v-else class="text-black/40 dark:text-white/40">{{ hint2 }}</span>
     </div>
   </form>
 </template>

@@ -36,6 +36,7 @@ export default defineEventHandler(async (event) => {
         kind: blocks.kind,
         startMin: blocks.plannedStartMin,
         endMin: blocks.plannedEndMin,
+        sort: blocks.sort,
         entryId: timeEntries.id,
         startedAt: timeEntries.startedAt,
         endedAt: timeEntries.endedAt,
@@ -46,7 +47,12 @@ export default defineEventHandler(async (event) => {
       .where(and(eq(days.userId, ownerId), gte(days.date, since), lte(days.date, to)))
       .orderBy(asc(days.date), asc(blocks.sort), asc(blocks.id)),
     db
-      .select({ date: days.date, status: days.status, mood: days.mood })
+      .select({
+        date: days.date,
+        status: days.status,
+        mood: days.mood,
+        startedAt: days.startedAt,
+      })
       .from(days)
       .where(and(eq(days.userId, ownerId), gte(days.date, from), lte(days.date, to))),
     db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, ownerId)),
@@ -66,13 +72,11 @@ export default defineEventHandler(async (event) => {
       endedAt: r.endedAt ? r.endedAt.toISOString() : null,
     }));
 
-  // каждый блок один раз: интервалы размножили строки джойном
-  const uniq = rows.filter((r, i, all) => all.findIndex((x) => x.blockId === r.blockId) === i);
-  const tracked = new Set(entries.map((e) => e.blockId));
-
-  // окно «с — по»: у онлайна это намерение (контур), у офлайна — само время задачи
-  const planned = uniq
-    .filter((r) => r.date >= from && r.startMin != null && r.endMin != null)
+  // каждый блок один раз: интервалы размножили строки джойном.
+  // раскладку по часам считает клиент — у него часовой пояс и он же её рисует
+  const planBlocks = rows
+    .filter((r, i, all) => all.findIndex((x) => x.blockId === r.blockId) === i)
+    .filter((r) => r.date >= from)
     .map((r) => ({
       id: r.blockId,
       date: r.date,
@@ -82,31 +86,26 @@ export default defineEventHandler(async (event) => {
       status: r.status,
       isUnplanned: r.isUnplanned,
       kind: r.kind,
-      startMin: r.startMin!,
-      endMin: r.endMin!,
-    }));
-
-  // блок без интервала и без окна в календаре не виден — показываем его отдельной строкой,
-  // иначе неделя выглядит пустее, чем была
-  const untracked = uniq
-    .filter((r) => r.date >= from && !tracked.has(r.blockId) && r.startMin == null)
-    .map((r) => ({
-      id: r.blockId,
-      date: r.date,
-      title: r.title,
-      category: r.category,
-      status: r.status,
       plannedMin: r.plannedMin,
-    }));
+      plannedStartMin: r.startMin,
+      plannedEndMin: r.endMin,
+      sort: r.sort,
+      tracked: entries.some((e) => e.blockId === r.blockId),
+    }))
+    .sort((a, b) => a.sort - b.sort || a.id - b.id);
 
   return {
     from,
     to,
     readonly: ownerId !== viewerId,
     owner: owner[0] ?? null,
-    days: dayRows,
+    days: dayRows.map((d) => ({
+      date: d.date,
+      status: d.status,
+      mood: d.mood,
+      startedAt: d.startedAt ? d.startedAt.toISOString() : null,
+    })),
     entries,
-    planned,
-    untracked,
+    blocks: planBlocks,
   };
 });

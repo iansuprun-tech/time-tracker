@@ -33,6 +33,16 @@ async function saveOrder(ids: number[]) {
 
 const { items: ordered, draggingId, start: grab, styleFor } = useDragSort(() => blocks.value, saveOrder);
 
+/**
+ * Расчётное время плавающих блоков: фиксированные стоят в своём окне,
+ * остальные идут подряд от начала дня и обтекают их.
+ */
+const schedule = computed(() => {
+  const startedAt = data.value?.day.startedAt ?? null;
+  return scheduleDay(blocks.value, startedAt ? minutesOfDay(startedAt) : undefined);
+});
+const slotFor = (id: number) => schedule.value.find((s) => s.id === id) ?? null;
+
 const blockMode = computed<"edit" | "plan" | "view">(() => {
   if (readonly.value) return "view";
   return started.value ? "edit" : "plan";
@@ -147,6 +157,7 @@ async function reload(part: "day" | "comments" = "day") {
         :key="b.id"
         :block="b"
         :notes="notesFor(b.id)"
+        :slot-plan="slotFor(b.id)"
         :mode="blockMode"
         :comments="comments ?? []"
         :reload="reload"

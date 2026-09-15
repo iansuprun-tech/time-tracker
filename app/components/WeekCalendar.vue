@@ -284,10 +284,17 @@ function shiftWeek(n: number) {
   router.push({ query: { ...route.query, from: shiftDays(from.value, n * 7) } });
 }
 
+const dayPath = computed(() => (props.ownerId ? `/u-${props.ownerId}` : "/day"));
+
 function openDay(date: string) {
-  const path = props.ownerId ? `/u-${props.ownerId}` : "/day";
-  router.push({ path, query: { date } });
+  router.push({ path: dayPath.value, query: { date } });
 }
+
+/**
+ * Открытая из сетки задача. Раньше клик уводил на день целиком, а плановый
+ * контур не кликался вовсе — посмотреть задачу и комментарии было неоткуда.
+ */
+const peekId = ref<number | null>(null);
 </script>
 
 <template>
@@ -380,20 +387,22 @@ function openDay(date: string) {
               <span class="absolute -left-1 -top-[3px] h-1.5 w-1.5 rounded-full bg-red-500" />
             </div>
 
-            <div
+            <button
               v-for="p in c.plans"
               :key="`p${p.id}`"
-              class="pointer-events-none absolute inset-x-1 overflow-hidden rounded px-1.5 py-0.5 text-[11px] leading-tight"
-              :class="
+              class="absolute inset-x-1 overflow-hidden rounded px-1.5 py-0.5 text-left text-[11px] leading-tight transition-colors hover:bg-black/[0.04] dark:hover:bg-white/5"
+              :class="[
                 p.fixed
                   ? 'border border-black/35 text-black/55 dark:border-white/40 dark:text-white/55'
-                  : 'border border-dashed border-black/20 text-black/40 dark:border-white/25 dark:text-white/40'
-              "
+                  : 'border border-dashed border-black/20 text-black/40 dark:border-white/25 dark:text-white/40',
+                c.date === today ? '' : 'opacity-60',
+              ]"
               :style="planStyle(p)"
               :title="`${p.title} · ${p.fixed ? 'фиксировано' : 'сдвинется'} ${minToHhmm(p.startMin)}–${minToHhmm(p.endMin)}`"
+              @click="peekId = p.id"
             >
               <span v-if="p.fixed">📌</span><span v-else>≈</span> {{ p.title }}
-            </div>
+            </button>
 
             <button
               v-for="s in c.items"
@@ -404,10 +413,11 @@ function openDay(date: string) {
                 s.status === 'dropped' ? 'opacity-50 line-through' : '',
                 s.isUnplanned ? 'border-l-4 border-white/60' : '',
                 s.running ? 'ring-2 ring-red-400' : '',
+                s.date === today ? '' : 'opacity-70 saturate-[0.85]',
               ]"
               :style="styleFor(s)"
               :title="`${s.title} · ${hhmm(s.from)}–${hhmm(s.to)}${s.category ? ' · ' + s.category : ''}${s.location ? ' · ' + s.location : ''}`"
-              @click="openDay(s.date)"
+              @click="peekId = s.blockId"
             >
               <template v-if="compact(s)">
                 <span class="font-medium">{{ s.title }}</span
@@ -434,8 +444,9 @@ function openDay(date: string) {
               v-for="b in c.loose"
               :key="b.id"
               class="block w-full truncate rounded-md border border-dashed border-black/15 px-1.5 py-0.5 text-left text-[11px] muted hover:bg-black/[0.03] dark:border-white/20 dark:hover:bg-white/5"
+              :class="c.date === today ? '' : 'opacity-70'"
               :title="b.title"
-              @click="openDay(c.date)"
+              @click="peekId = b.id"
             >
               {{ b.title }}
             </button>
@@ -447,5 +458,7 @@ function openDay(date: string) {
     <p v-if="!pieces.length && !plans.length" class="mt-4 text-center text-sm muted">
       На этой неделе ещё ничего не запланировано.
     </p>
+
+    <BlockPeek v-if="peekId" :key="peekId" :block-id="peekId" :day-path="dayPath" @close="peekId = null" />
   </main>
 </template>

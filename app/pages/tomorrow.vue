@@ -8,6 +8,10 @@ const { data: todayData } = await useFetch("/api/day", { query: { date: today } 
 const blocks = computed(() => data.value?.blocks ?? []);
 const plannedMin = computed(() => blocks.value.reduce((s, b) => s + (b.plannedMin ?? 0), 0));
 
+function notesFor(blockId: number) {
+  return (data.value?.notes ?? []).filter((n) => n.blockId === blockId);
+}
+
 async function saveOrder(ids: number[]) {
   await $fetch<{ ok: boolean }>("/api/blocks/reorder", { method: "POST", body: { ids } });
   await refresh();
@@ -62,7 +66,7 @@ async function copyFromToday() {
         v-for="b in ordered"
         :key="b.id"
         :block="b"
-        :notes="[]"
+        :notes="notesFor(b.id)"
         :mode="'plan'"
         :reload="async () => { await refresh(); }"
         :reorderable="blocks.length > 1"

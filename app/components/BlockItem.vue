@@ -45,10 +45,18 @@ const props = defineProps<{
 const emit = defineEmits<{ grab: [event: PointerEvent] }>();
 
 const editable = computed(() => props.mode === "edit");
-const commentsOpen = ref(false);
 const commentCount = computed(
   () => (props.comments ?? []).filter((c) => c.targetType === "block" && c.targetId === props.block.id).length,
 );
+/**
+ * Заметки и комментарии живут под одним маркером: в списке видно, что по задаче
+ * что-то сказано, а сам текст разворачивается по клику. Иначе длинный разговор
+ * раздувает список и план перестаёт читаться с одного взгляда.
+ */
+const threadOpen = ref(false);
+const threadCount = computed(() => props.notes.length + commentCount.value);
+/** читать нечего — открываем сразу на ввод, иначе не воруем фокус и клавиатуру */
+const threadEmpty = computed(() => threadCount.value === 0);
 
 const STATUSES = [
   { value: "todo", label: "к работе" },
@@ -77,7 +85,6 @@ const windowOpen = ref(false);
 const fromAt = ref("");
 const toAt = ref("");
 
-const noteOpen = ref(false);
 const noteText = ref("");
 const factOpen = ref(false);
 const factValue = ref(0);
@@ -192,7 +199,7 @@ async function saveNote() {
     $fetch<{ ok: boolean }>("/api/notes", { method: "POST", body: { blockId: props.block.id, text: noteText.value } }),
   );
   noteText.value = "";
-  noteOpen.value = false;
+  // панель не закрываем: только что написанное должно остаться на виду
 }
 </script>
 
@@ -346,18 +353,11 @@ async function saveNote() {
                 <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
               </select>
             </div>
-
-            <ul
-              v-if="notes.length"
-              class="mt-2 space-y-1 border-l-2 border-black/10 pl-2 text-xs text-black/65 dark:border-white/15 dark:text-white/65"
-            >
-              <li v-for="n in notes" :key="n.id">{{ n.text }}</li>
-            </ul>
           </div>
 
-          <div v-if="editable" class="flex shrink-0 items-center gap-1 self-start">
+          <div class="flex shrink-0 items-center gap-1 self-start">
             <button
-              v-if="block.status !== 'done' && !offline"
+              v-if="editable && block.status !== 'done' && !offline"
               :disabled="busy"
               class="min-w-16 text-xs"
               :class="running ? 'btn-soft' : 'btn-primary'"
@@ -366,7 +366,9 @@ async function saveNote() {
               <Spinner v-if="busy" />
               {{ running ? "Стоп" : "Старт" }}
             </button>
+
             <button
+              v-if="editable"
               :disabled="busy"
               class="btn-soft px-3 text-xs"
               @click="toggleDone"
@@ -374,55 +376,75 @@ async function saveNote() {
               <Spinner v-if="busy" />
               <template v-else>{{ block.status === "done" ? "↺" : "✓" }}</template>
             </button>
+
             <button
-              class="btn-soft px-3 text-xs"
-              @click="noteOpen = !noteOpen"
+              type="button"
+              class="btn-soft px-2.5 py-1 text-xs"
+              :class="
+                threadCount
+                  ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-400'
+                  : 'text-black/40 dark:text-white/40'
+              "
+              :aria-expanded="threadOpen"
+              :title="threadCount ? `Записей: ${threadCount}` : 'Написать заметку'"
+              @click="threadOpen = !threadOpen"
             >
-              +заметка
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.8A8.4 8.4 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z" />
+              </svg>
+              <span v-if="threadCount" class="tabular-nums">{{ threadCount }}</span>
+            </button>
+
+            <button
+              v-if="mode === 'plan'"
+              :disabled="busy"
+              class="btn-soft px-2 py-1 text-xs"
+              @click="remove"
+            >
+              <Spinner v-if="busy" />
+              <template v-else>✕</template>
             </button>
           </div>
-
-          <button
-            v-else-if="mode === 'plan'"
-            :disabled="busy"
-            class="btn-soft shrink-0 px-2 py-1 text-xs"
-            @click="remove"
-          >
-            <Spinner v-if="busy" />
-            <template v-else>✕</template>
-          </button>
-
-          <button
-            v-else
-            class="btn-soft shrink-0 px-2 py-1 text-xs"
-            @click="commentsOpen = !commentsOpen"
-          >
-            💬<span v-if="commentCount"> {{ commentCount }}</span>
-          </button>
         </div>
 
-        <div v-if="mode === 'view' && commentsOpen" class="mt-3 border-t border-black/10 pt-3 dark:border-white/15">
-          <CommentThread
-            target-type="block"
-            :target-id="block.id"
-            :comments="comments ?? []"
-            compact
-            @added="reload('comments')"
-          />
-        </div>
+        <div
+          v-if="threadOpen"
+          class="mt-3 space-y-2 border-t border-black/10 pt-3 dark:border-white/15"
+        >
+          <ul
+            v-if="notes.length"
+            class="space-y-1 border-l-2 border-black/10 pl-2 text-xs text-black/65 dark:border-white/15 dark:text-white/65"
+          >
+            <li v-for="n in notes" :key="n.id" class="whitespace-pre-wrap">{{ n.text }}</li>
+          </ul>
 
-        <form v-if="noteOpen" class="mt-2 flex gap-2" @submit.prevent="saveNote">
-          <input
-            v-model="noteText"
-            autofocus
-            placeholder="что происходит по этому блоку"
-            class="field flex-1 py-1 text-xs"
-          />
-          <button :disabled="busy" class="btn-soft px-2 py-1 text-xs">
-            <Spinner v-if="busy" />
-            ок
-          </button>
-        </form>
+          <form v-if="mode !== 'view'" class="flex gap-2" @submit.prevent="saveNote">
+            <input
+              v-model="noteText"
+              :autofocus="threadEmpty"
+              placeholder="что происходит по этому блоку"
+              class="field flex-1 py-1 text-xs"
+            />
+            <button :disabled="busy" class="btn-soft px-2 py-1 text-xs">
+              <Spinner v-if="busy" />
+              ок
+            </button>
+          </form>
+
+          <!-- свои комментарии друзей владелец иначе не увидит вовсе -->
+          <div
+            v-if="mode === 'view' || commentCount"
+            :class="notes.length || mode !== 'view' ? 'border-t border-black/10 pt-2 dark:border-white/15' : ''"
+          >
+            <CommentThread
+              target-type="block"
+              :target-id="block.id"
+              :comments="comments ?? []"
+              compact
+              @added="reload('comments')"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </li>

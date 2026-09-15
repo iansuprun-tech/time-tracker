@@ -17,12 +17,16 @@ const title = ref("");
  * в свой день: «позвонить в четверг» надо класть в четверг, не уходя со страницы.
  */
 const date = ref(props.date);
-watch(
-  () => props.date,
-  (d) => (date.value = d),
-);
 /** блок ушёл в другой день — без строки об этом он выглядит пропавшим */
 const sent = ref<{ title: string; date: string } | null>(null);
+watch(
+  () => props.date,
+  (d) => {
+    date.value = d;
+    // на другой день уходят по самой же квитанции: там она врёт, что блок не здесь
+    sent.value = null;
+  },
+);
 const plannedMin = ref<number | null>(null);
 const category = ref("");
 const location = ref("");
@@ -199,13 +203,14 @@ async function submit() {
         Указать время
       </button>
 
-      <template v-else>
+      <!-- пара времён переезжает на новую строку целиком: иначе «—» повисает в начале строки -->
+      <span v-else class="inline-flex items-center gap-2">
         <TimeField v-model="startAt" placeholder="с" />
         <span class="muted">—</span>
         <TimeField v-model="endAt" placeholder="по" :from-min="hhmmToMin(startAt)" />
         <span v-if="spanLabel" class="chip">{{ spanLabel }}</span>
         <button type="button" class="btn-quiet" @click="clearTime">убрать</button>
-      </template>
+      </span>
     </div>
 
     <p v-if="sent" class="text-xs text-emerald-700 dark:text-emerald-400">

@@ -14,6 +14,8 @@ const emit = defineEmits<{ "update:modelValue": [string] }>();
 
 const open = ref(false);
 const root = ref<HTMLElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
+const { style } = usePopover(root, open, 176);
 const today = localDate();
 
 /** «Сегодня» читается сразу, «2026-09-17» — по слогам */
@@ -38,7 +40,10 @@ function choose(date: string) {
 }
 
 function onDocumentPointer(e: PointerEvent) {
-  if (root.value && !root.value.contains(e.target as Node)) open.value = false;
+  const t = e.target as Node;
+  // список живёт в <body>, поэтому «снаружи» — это снаружи обоих
+  if (root.value?.contains(t) || panel.value?.contains(t)) return;
+  open.value = false;
 }
 onMounted(() => document.addEventListener("pointerdown", onDocumentPointer));
 onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPointer));
@@ -57,11 +62,13 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPoin
       {{ label(modelValue) }}
     </button>
 
-    <div
-      v-if="open"
-      class="absolute left-0 top-full z-30 mt-1 w-44 rounded-lg border border-black/10 bg-white py-1 shadow-lg dark:border-white/15 dark:bg-neutral-800"
-    >
-      <ul>
+    <Teleport v-if="open" to="body">
+      <div
+        ref="panel"
+        :style="style"
+        class="z-[60] flex flex-col overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-xl dark:border-white/15 dark:bg-neutral-800"
+      >
+        <ul class="min-h-0 flex-1 overflow-auto">
         <li v-for="d in options" :key="d">
           <button
             type="button"
@@ -75,15 +82,16 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPoin
         </li>
       </ul>
 
-      <label class="mt-1 flex items-center gap-2 border-t border-black/10 px-2.5 pb-1 pt-2 text-[11px] muted dark:border-white/15">
-        другой день
-        <input
-          type="date"
-          :value="modelValue"
-          class="field min-w-0 flex-1 px-1.5 py-0.5 text-xs"
-          @change="choose(($event.target as HTMLInputElement).value)"
-        />
-      </label>
-    </div>
+        <label class="mt-1 flex shrink-0 items-center gap-2 border-t border-black/10 px-2.5 pb-1 pt-2 text-[11px] muted dark:border-white/15">
+          другой день
+          <input
+            type="date"
+            :value="modelValue"
+            class="field min-w-0 flex-1 px-1.5 py-0.5 text-xs"
+            @change="choose(($event.target as HTMLInputElement).value)"
+          />
+        </label>
+      </div>
+    </Teleport>
   </div>
 </template>

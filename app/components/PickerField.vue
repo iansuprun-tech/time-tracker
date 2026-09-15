@@ -25,7 +25,9 @@ const emit = defineEmits<{ "update:modelValue": [string] }>();
 const open = ref(false);
 const draft = ref("");
 const root = ref<HTMLElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
 const input = ref<HTMLInputElement | null>(null);
+const { style } = usePopover(root, open, 208);
 
 const show = (value: string) => props.optionLabel?.(value) ?? value;
 
@@ -61,7 +63,10 @@ function create() {
 }
 
 function onDocumentPointer(e: PointerEvent) {
-  if (root.value && !root.value.contains(e.target as Node)) open.value = false;
+  const t = e.target as Node;
+  // список живёт в <body>, поэтому «снаружи» — это снаружи обоих
+  if (root.value?.contains(t) || panel.value?.contains(t)) return;
+  open.value = false;
 }
 onMounted(() => document.addEventListener("pointerdown", onDocumentPointer));
 onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPointer));
@@ -76,56 +81,59 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPoin
       {{ modelValue ? show(modelValue) : label }}
     </button>
 
-    <div
-      v-if="open"
-      class="absolute left-0 top-full z-30 mt-1 w-52 rounded-lg border border-black/10 bg-white py-1 shadow-lg dark:border-white/15 dark:bg-neutral-800"
-    >
-      <ul v-if="shown.length" class="max-h-44 overflow-auto">
-        <li v-for="o in shown" :key="o">
+    <Teleport v-if="open" to="body">
+      <div
+        ref="panel"
+        :style="style"
+        class="z-[60] flex flex-col overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-xl dark:border-white/15 dark:bg-neutral-800"
+      >
+        <ul v-if="shown.length" class="min-h-0 flex-1 overflow-auto">
+          <li v-for="o in shown" :key="o">
+            <button
+              type="button"
+              class="w-full px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
+              :class="o === modelValue ? 'font-medium text-emerald-700 dark:text-emerald-400' : ''"
+              @click="choose(o)"
+            >
+              {{ show(o) }}
+            </button>
+          </li>
+        </ul>
+
+        <p v-else class="px-2.5 py-1.5 text-[11px] muted">
+          {{ draft.trim() ? "Ничего не нашлось" : "Пока пусто — заведите первый" }}
+        </p>
+
+        <div class="mt-1 flex shrink-0 gap-1 border-t border-black/10 px-1.5 pb-1 pt-1.5 dark:border-white/15">
+          <input
+            ref="input"
+            v-model="draft"
+            :placeholder="addLabel"
+            :inputmode="numeric ? 'numeric' : undefined"
+            class="field min-w-0 flex-1 py-1 text-xs"
+            @keydown.enter.prevent="create"
+            @keydown.esc.stop="open = false"
+          />
           <button
             type="button"
-            class="w-full px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
-            :class="o === modelValue ? 'font-medium text-emerald-700 dark:text-emerald-400' : ''"
-            @click="choose(o)"
+            :disabled="!draft.trim() || exists"
+            class="btn-soft shrink-0 px-2 py-1 text-xs"
+            :title="exists ? 'Такое уже есть в списке' : 'Завести новое'"
+            @click="create"
           >
-            {{ show(o) }}
+            +
           </button>
-        </li>
-      </ul>
+        </div>
 
-      <p v-else class="px-2.5 py-1.5 text-[11px] muted">
-        {{ draft.trim() ? "Ничего не нашлось" : "Пока пусто — заведите первый" }}
-      </p>
-
-      <div class="mt-1 flex gap-1 border-t border-black/10 px-1.5 pb-1 pt-1.5 dark:border-white/15">
-        <input
-          ref="input"
-          v-model="draft"
-          :placeholder="addLabel"
-          :inputmode="numeric ? 'numeric' : undefined"
-          class="field min-w-0 flex-1 py-1 text-xs"
-          @keydown.enter.prevent="create"
-          @keydown.esc.stop="open = false"
-        />
         <button
+          v-if="modelValue"
           type="button"
-          :disabled="!draft.trim() || exists"
-          class="btn-soft shrink-0 px-2 py-1 text-xs"
-          :title="exists ? 'Такое уже есть в списке' : 'Завести новое'"
-          @click="create"
+          class="w-full shrink-0 px-2.5 py-1 text-left text-[11px] muted transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
+          @click="choose('')"
         >
-          +
+          убрать
         </button>
       </div>
-
-      <button
-        v-if="modelValue"
-        type="button"
-        class="w-full px-2.5 py-1 text-left text-[11px] muted transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
-        @click="choose('')"
-      >
-        убрать
-      </button>
-    </div>
+    </Teleport>
   </div>
 </template>

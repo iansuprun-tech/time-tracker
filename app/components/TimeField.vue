@@ -16,6 +16,8 @@ const emit = defineEmits<{ "update:modelValue": [string] }>();
 const text = ref(props.modelValue);
 const open = ref(false);
 const root = ref<HTMLElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
+const { style } = usePopover(root, open, 128);
 
 watch(
   () => props.modelValue,
@@ -70,7 +72,10 @@ function hm(min: number) {
 }
 
 function onDocumentPointer(e: PointerEvent) {
-  if (root.value && !root.value.contains(e.target as Node)) open.value = false;
+  const t = e.target as Node;
+  // список живёт в <body>, поэтому «снаружи» — это снаружи обоих
+  if (root.value?.contains(t) || panel.value?.contains(t)) return;
+  open.value = false;
 }
 onMounted(() => document.addEventListener("pointerdown", onDocumentPointer));
 onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPointer));
@@ -90,10 +95,12 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPoin
       @keydown.esc="open = false"
     />
 
-    <ul
-      v-if="open"
-      class="absolute left-0 top-full z-30 mt-1 max-h-56 w-32 overflow-auto rounded-lg border border-black/10 bg-white py-1 shadow-lg dark:border-white/15 dark:bg-neutral-800"
-    >
+    <Teleport v-if="open" to="body">
+      <ul
+        ref="panel"
+        :style="style"
+        class="z-[60] overflow-auto rounded-lg border border-black/10 bg-white py-1 shadow-xl dark:border-white/15 dark:bg-neutral-800"
+      >
       <li v-for="o in options" :key="o.value">
         <button
           type="button"
@@ -104,7 +111,8 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPoin
           <span class="tabular-nums">{{ o.value }}</span>
           <span v-if="o.hint" class="muted">{{ o.hint }}</span>
         </button>
-      </li>
-    </ul>
+        </li>
+      </ul>
+    </Teleport>
   </div>
 </template>

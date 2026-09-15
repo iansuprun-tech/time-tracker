@@ -12,6 +12,17 @@ const categoryOptions = computed(() => [
 const placeOptions = computed(() => (presets.value?.places ?? []).map((p) => p.name));
 
 const title = ref("");
+/**
+ * День, в который уйдёт блок. Обычно открытый, но задача редко приходит в голову
+ * в свой день: «позвонить в четверг» надо класть в четверг, не уходя со страницы.
+ */
+const date = ref(props.date);
+watch(
+  () => props.date,
+  (d) => (date.value = d),
+);
+/** блок ушёл в другой день — без строки об этом он выглядит пропавшим */
+const sent = ref<{ title: string; date: string } | null>(null);
 const plannedMin = ref<number | null>(null);
 const category = ref("");
 const location = ref("");
@@ -54,7 +65,7 @@ function clearTime() {
 function suggestWindow() {
   const now = new Date();
   const start =
-    props.date === localDate()
+    date.value === localDate()
       ? Math.floor((now.getHours() * 60 + now.getMinutes()) / 15) * 15
       : 10 * 60;
   startAt.value = minToHhmm(start);
@@ -98,11 +109,13 @@ async function submit() {
   }
 
   saving.value = true;
+  sent.value = null;
+  const sentTitle = title.value.trim();
   try {
     await $fetch<{ id: number }>("/api/blocks", {
       method: "POST",
       body: {
-        date: props.date,
+        date: date.value,
         title: title.value,
         plannedMin: plannedMin.value,
         category: category.value,
@@ -119,7 +132,9 @@ async function submit() {
       startAt.value = minToHhmm(endMin);
       endAt.value = minToHhmm(Math.min(endMin + 60, 1440));
     }
-    // категорию и место оставляем — подряд обычно заводят блоки одного типа
+    // ушедшее в другой день на этой странице не появится — говорим, куда оно делось
+    if (date.value !== props.date) sent.value = { title: sentTitle, date: date.value };
+    // категорию, место и день оставляем — подряд обычно заводят блоки одного типа
     emit("added");
   } catch (e) {
     error.value = (e as { data?: { message?: string } }).data?.message ?? "Не сохранилось";
@@ -174,6 +189,8 @@ async function submit() {
         </button>
       </div>
 
+      <DateField v-model="date" :highlight="date !== props.date" />
+
       <button v-if="!timeOpen" type="button" class="btn-soft px-2.5 py-1 text-xs" @click="openTime">
         <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="9" />
@@ -190,6 +207,13 @@ async function submit() {
         <button type="button" class="btn-quiet" @click="clearTime">убрать</button>
       </template>
     </div>
+
+    <p v-if="sent" class="text-xs text-emerald-700 dark:text-emerald-400">
+      «{{ sent.title }}» → {{ formatHuman(sent.date, false) }} ·
+      <NuxtLink :to="{ path: '/day', query: { date: sent.date } }" class="underline underline-offset-2">
+        открыть
+      </NuxtLink>
+    </p>
 
     <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>
     <p v-else class="text-xs muted">{{ hint2 }}</p>

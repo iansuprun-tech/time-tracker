@@ -43,6 +43,23 @@ body {
     @apply rounded-md bg-black/[0.06] px-1.5 py-0.5 text-[11px] text-black/60 dark:bg-white/10 dark:text-white/60;
   }
 
+  /**
+   * Атрибут задачи в форме создания. Пустой — пунктир и тихий текст: поле
+   * в рамке требует, чтобы его заполнили, а категория и место нужны не всегда.
+   * Заполненный — акцент: видно, что выбор сделан руками.
+   */
+  .chip-empty {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-dashed border-black/20 px-2.5 py-1 text-xs text-black/45 transition-colors hover:border-black/35 hover:text-black/70 dark:border-white/20 dark:text-white/45 dark:hover:border-white/35 dark:hover:text-white/70;
+  }
+
+  .chip-attr {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1 text-xs text-black/70 transition-colors hover:bg-black/[0.04] dark:border-white/15 dark:text-white/70 dark:hover:bg-white/5;
+  }
+
+  .chip-set {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/[0.07] px-2.5 py-1 text-xs text-emerald-700 transition-colors dark:text-emerald-400;
+  }
+
   .muted {
     @apply text-black/50 dark:text-white/50;
   }

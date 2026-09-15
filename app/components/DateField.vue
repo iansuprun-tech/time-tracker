@@ -48,11 +48,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPoin
   <div ref="root" class="relative">
     <button
       type="button"
-      class="btn-soft gap-1.5 px-2.5 py-1 text-xs"
-      :class="[
-        open ? 'border-emerald-500/60' : '',
-        highlight ? 'border-emerald-500/60 text-emerald-700 dark:text-emerald-400' : '',
-      ]"
+      :class="[highlight ? 'chip-set' : 'chip-attr', open ? 'border-emerald-500/60' : '']"
       @click="open = !open"
     >
       <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">

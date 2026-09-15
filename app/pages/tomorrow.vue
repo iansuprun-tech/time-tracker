@@ -84,9 +84,6 @@ async function copyFromToday() {
       <p class="text-sm muted">План на завтра пишется сегодня — так утро начинается без раскачки.</p>
     </div>
 
-    <section class="card card-pad mt-4">
-      <h2 class="mb-3 text-sm font-medium">Добавить блок</h2>
-      <AddBlock :date="date" hint="что делаем завтра" @added="refresh" />
-    </section>
+    <AddBlock class="mt-4" :date="date" label="Добавить блок на завтра" @added="refresh" />
   </main>
 </template>

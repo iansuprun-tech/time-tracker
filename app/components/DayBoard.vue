@@ -173,14 +173,14 @@ async function reload(part: "day" | "comments" = "day") {
       </button>
     </section>
 
-    <section v-if="!readonly && !finished" class="card card-pad mb-5">
-      <h2 class="mb-3 text-sm font-medium">{{ started ? "Добавить задачу" : "План на день" }}</h2>
-      <AddBlock
-        :date="date"
-        :hint="started ? 'новая задача (пойдёт как вне плана)' : 'название блока'"
-        @added="reload()"
-      />
-    </section>
+    <AddBlock
+      v-if="!readonly && !finished"
+      class="mb-5"
+      :date="date"
+      :label="started ? 'Добавить задачу' : 'Добавить блок в план'"
+      :day-started="started"
+      @added="reload()"
+    />
 
     <ul v-if="blocks.length" class="space-y-2">
       <BlockItem

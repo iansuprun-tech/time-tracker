@@ -9,7 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{ added: [] }>();
 
 const { data: knownCategories } = await useFetch("/api/categories");
-const { data: presets } = await useFetch("/api/presets");
+const { data: presets, refresh: reloadPresets } = await useFetch("/api/presets");
 
 // в подсказках и шаблоны, и всё, что уже встречалось в блоках
 const categoryOptions = computed(() => [
@@ -71,6 +71,9 @@ const spanMin = computed(() => {
 });
 
 const spanLabel = computed(() => (spanMin.value ? hm(spanMin.value) : null));
+
+/** «90» из списка длительностей читается как «1ч 30м» */
+const minutesLabel = (value: string) => hm(Number(value));
 
 function hm(min: number) {
   if (min < 60) return `${min}м`;
@@ -204,6 +207,9 @@ async function submit() {
       startAt.value = minToHhmm(endMin);
       endAt.value = minToHhmm(Math.min(endMin + 60, 1440));
     }
+    // заведённое в форме значение стало шаблоном на сервере: перечитываем,
+    // иначе новый проект не появится в списке до перезагрузки страницы
+    await reloadPresets();
     // ушедшее в другой день на этой странице не появится — говорим, куда оно делось
     if (date.value !== props.date) sent.value = { title: sentTitle, date: date.value };
     // категорию, место и день оставляем — подряд обычно заводят блоки одного типа
@@ -293,20 +299,38 @@ async function submit() {
                 <button type="button" class="btn-quiet" @click="clearTime">убрать</button>
               </span>
 
-              <ChipField
+              <PickerField
                 v-if="!timeOpen"
                 v-model="durationText"
                 label="Длительность"
+                add-label="минут"
                 :icon="ICON.clock"
-                :display="plannedMin ? hm(plannedMin) : undefined"
                 :options="['15', '30', '45', '60', '90', '120']"
+                :option-label="minutesLabel"
                 numeric
-                width="w-20"
               />
 
-              <ChipField v-model="project" label="Проект" :icon="ICON.project" :options="projectOptions" />
-              <ChipField v-model="category" label="Категория" :icon="ICON.tag" :options="categoryOptions" />
-              <ChipField v-model="location" label="Место" :icon="ICON.place" :options="placeOptions" />
+              <PickerField
+                v-model="project"
+                label="Проект"
+                add-label="новый проект"
+                :icon="ICON.project"
+                :options="projectOptions"
+              />
+              <PickerField
+                v-model="category"
+                label="Категория"
+                add-label="новая категория"
+                :icon="ICON.tag"
+                :options="categoryOptions"
+              />
+              <PickerField
+                v-model="location"
+                label="Место"
+                add-label="новое место"
+                :icon="ICON.place"
+                :options="placeOptions"
+              />
             </div>
 
             <textarea

@@ -3,7 +3,7 @@ import { db } from "./db";
 import { blocks, days, presets } from "./schema";
 import { fail } from "./http";
 
-export const PRESET_KINDS = ["category", "place"] as const;
+export const PRESET_KINDS = ["category", "place", "project"] as const;
 export type PresetKind = (typeof PRESET_KINDS)[number];
 
 export function assertKind(kind: unknown): PresetKind {
@@ -37,10 +37,10 @@ export async function rememberPreset(userId: number, kind: PresetKind, name?: st
 
 /** Переименование тянет за собой блоки: иначе старое значение остаётся в истории сиротой */
 export async function renameInBlocks(userId: number, kind: PresetKind, from: string, to: string) {
-  const column = kind === "place" ? blocks.location : blocks.category;
+  const column = { place: blocks.location, project: blocks.project, category: blocks.category }[kind];
   await db
     .update(blocks)
-    .set(kind === "place" ? { location: to } : { category: to })
+    .set({ place: { location: to }, project: { project: to }, category: { category: to } }[kind])
     .where(
       and(
         eq(column, from),
@@ -59,5 +59,6 @@ export async function listPresets(userId: number) {
   return {
     categories: rows.filter((r) => r.kind === "category"),
     places: rows.filter((r) => r.kind === "place"),
+    projects: rows.filter((r) => r.kind === "project"),
   };
 }

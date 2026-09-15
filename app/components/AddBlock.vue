@@ -16,9 +16,11 @@ const categoryOptions = computed(() => [
   ...new Set([...(presets.value?.categories ?? []).map((c) => c.name), ...(knownCategories.value ?? [])]),
 ]);
 const placeOptions = computed(() => (presets.value?.places ?? []).map((p) => p.name));
+const projectOptions = computed(() => (presets.value?.projects ?? []).map((p) => p.name));
 
 const ICON = {
   tag: "M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01",
+  project: "M4 20h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-7.6a1 1 0 0 1-.8-.4l-1.2-1.6a1 1 0 0 0-.8-.4H4a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1z",
   place: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
   clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 7v5l3 2",
 };
@@ -37,6 +39,7 @@ const date = ref(props.date);
 const sent = ref<{ title: string; date: string } | null>(null);
 const durationText = ref("");
 const category = ref("");
+const project = ref("");
 const location = ref("");
 /** online — время натикает таймером, offline — вписывается руками и таймер не нужен */
 const kind = ref<"online" | "offline">("online");
@@ -176,6 +179,7 @@ async function submit() {
         title: title.value,
         plannedMin: plannedMin.value,
         category: category.value,
+        project: project.value,
         location: location.value,
         kind: kind.value,
         startMin,
@@ -300,6 +304,7 @@ async function submit() {
                 width="w-20"
               />
 
+              <ChipField v-model="project" label="Проект" :icon="ICON.project" :options="projectOptions" />
               <ChipField v-model="category" label="Категория" :icon="ICON.tag" :options="categoryOptions" />
               <ChipField v-model="location" label="Место" :icon="ICON.place" :options="placeOptions" />
             </div>

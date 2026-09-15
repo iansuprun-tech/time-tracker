@@ -59,6 +59,8 @@ export const blocks = pgTable(
     dayId: integer("day_id").notNull().references(() => days.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     category: text("category"),
+    /** проект, к которому относится задача: свободная строка, шаблоны лежат в presets */
+    project: text("project"),
     /** место: «офис», «дома», «у клиента» — свободная строка, шаблоны лежат в presets */
     location: text("location"),
     plannedMin: integer("planned_min"),
@@ -77,9 +79,9 @@ export const blocks = pgTable(
 );
 
 /**
- * Шаблоны мест и категорий: свой список у каждого.
+ * Шаблоны категорий, мест и проектов: свой список у каждого.
  * Пополняется сам, когда в блоке появляется новое значение, — руками правится на «Настройках».
- * kind: category | place
+ * kind: category | place | project
  */
 export const presets = pgTable(
   "presets",

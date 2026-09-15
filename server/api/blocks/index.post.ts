@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
     title: string;
     plannedMin?: number | null;
     category?: string | null;
+    project?: string | null;
     location?: string | null;
     /** online — время натикает таймером, offline — вписано руками */
     kind?: string;
@@ -47,6 +48,7 @@ export default defineEventHandler(async (event) => {
       plannedStartMin: window?.start ?? null,
       plannedEndMin: window?.end ?? null,
       category: body.category?.trim() || null,
+      project: body.project?.trim() || null,
       location: body.location?.trim() || null,
       sort: max + 1,
       // всё, что заведено после старта дня, в план не входило
@@ -58,6 +60,7 @@ export default defineEventHandler(async (event) => {
   await Promise.all([
     rememberPreset(userId, "category", body.category),
     rememberPreset(userId, "place", body.location),
+    rememberPreset(userId, "project", body.project),
   ]);
 
   return created;

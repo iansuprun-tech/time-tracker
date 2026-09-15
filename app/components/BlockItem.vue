@@ -3,6 +3,7 @@ type Block = {
   id: number;
   title: string;
   category: string | null;
+  project: string | null;
   location: string | null;
   plannedMin: number | null;
   actualMin: number | null;
@@ -124,6 +125,7 @@ type BlockPatch = {
   actualMin?: number | null;
   title?: string;
   category?: string | null;
+  project?: string | null;
   startMin?: number | null;
   endMin?: number | null;
 };
@@ -230,6 +232,12 @@ async function saveNote() {
             <div class="flex flex-wrap items-center gap-2">
               <span :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''">
                 {{ block.title }}
+              </span>
+              <span
+                v-if="block.project"
+                class="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
+              >
+                {{ block.project }}
               </span>
               <span
                 v-if="block.category"

@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
     actualMin?: number | null;
     title?: string;
     category?: string | null;
+    project?: string | null;
     location?: string | null;
     /** окно целиком: обе границы или обе null — «убрать время» */
     startMin?: number | null;
@@ -39,6 +40,7 @@ export default defineEventHandler(async (event) => {
       ...(body.actualMin !== undefined ? { actualMin: body.actualMin } : {}),
       ...(body.category !== undefined ? { category: body.category?.trim() || null } : {}),
       ...(body.location !== undefined ? { location: body.location?.trim() || null } : {}),
+      ...(body.project !== undefined ? { project: body.project?.trim() || null } : {}),
       ...(touchesWindow
         ? {
             plannedStartMin: window?.start ?? null,
@@ -54,6 +56,7 @@ export default defineEventHandler(async (event) => {
   await Promise.all([
     rememberPreset(userId, "category", body.category),
     rememberPreset(userId, "place", body.location),
+    rememberPreset(userId, "project", body.project),
   ]);
 
   return { ok: true };

@@ -28,6 +28,13 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
         :reload="reload"
       />
       <PresetList
+        kind="project"
+        title="Проекты"
+        hint="К какому проекту относится задача. Новое значение из формы попадает сюда само."
+        :items="presets?.projects ?? []"
+        :reload="reload"
+      />
+      <PresetList
         kind="place"
         title="Места"
         hint="Офис, дом, коворкинг — подставляются в поле места."

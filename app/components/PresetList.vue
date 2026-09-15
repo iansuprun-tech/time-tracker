@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** Список шаблонов одного вида: добавить, переименовать, убрать */
 const props = defineProps<{
-  kind: "category" | "place";
+  kind: "category" | "place" | "project";
   title: string;
   hint: string;
   items: { id: number; name: string }[];

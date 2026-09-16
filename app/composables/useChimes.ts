@@ -106,6 +106,12 @@ export function unlockAudio() {
 }
 
 let keepAlive: ConstantSourceNode | null = null;
+/**
+ * Счётчик, а не флаг: таймеров на странице теперь несколько — в списке дня
+ * и в боковой панели. С флагом любой из них, уходя, гасил бы бодрствование,
+ * нужное остальным, и делал бы это ровно при переходе между страницами.
+ */
+let keepCount = 0;
 
 /**
  * Держит аудиоконтекст бодрствующим, пока идёт таймер.
@@ -120,10 +126,14 @@ export function keepAudioAwake(on: boolean) {
   if (!c) return;
 
   if (!on) {
+    keepCount = Math.max(0, keepCount - 1);
+    if (keepCount > 0) return;
     keepAlive?.stop();
     keepAlive = null;
     return;
   }
+
+  keepCount += 1;
   if (keepAlive) return;
 
   if (c.state === "suspended") void c.resume();

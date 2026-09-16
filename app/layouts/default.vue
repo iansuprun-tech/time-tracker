@@ -45,6 +45,17 @@ const current = computed(() => goingTo.value ?? route.path);
 
 const busy = ref(false);
 
+/**
+ * Панель задач нужна там, где своего списка нет. На «Моём дне» за сегодня он
+ * и так перед глазами — дублировать его слева незачем, да и звонили бы два
+ * таймера сразу. На чужом дне и на своём за другую дату панель уместна.
+ */
+const showDock = computed(() => {
+  if (route.path !== "/day") return true;
+  const date = (route.query.date as string) || localDate();
+  return date !== localDate();
+});
+
 async function logout() {
   busy.value = true;
   try {
@@ -91,6 +102,10 @@ async function logout() {
           {{ l.label }}
         </NuxtLink>
       </nav>
+
+      <ClientOnly>
+        <TodayDock v-if="showDock" />
+      </ClientOnly>
 
       <div
         class="mt-auto hidden items-center gap-2.5 border-t border-white/10 px-5 py-4 text-sm md:flex"

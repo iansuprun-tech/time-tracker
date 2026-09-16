@@ -24,7 +24,7 @@ onMounted(() => {
 });
 onUnmounted(() => {
   clearInterval(timer);
-  keepAwake(false);
+  if (props.chime) keepAwake(false);
 });
 
 // сервер отдаёт точку отсчёта, клиент только рисует —

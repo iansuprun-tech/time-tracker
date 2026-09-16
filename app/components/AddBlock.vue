@@ -218,12 +218,34 @@ async function submit() {
       {{ label }}
     </button>
 
-    <p v-if="sent" class="mt-2 text-center text-xs text-emerald-700 dark:text-emerald-400">
-      «{{ sent.title }}» → {{ formatHuman(sent.date, false) }} ·
-      <NuxtLink :to="{ path: '/day', query: { date: sent.date } }" class="underline underline-offset-2">
-        открыть
+    <!--
+      Задача ушла в день, который сейчас не открыт: в списке под формой её
+      не будет, и без этого сохранение выглядит молча провалившимся.
+      Строкой мелким шрифтом это не читается — внимание в момент закрытия
+      модалки не здесь, поэтому плашка с кнопкой в полный рост.
+    -->
+    <div
+      v-if="sent"
+      class="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/[0.08] px-4 py-3"
+    >
+      <svg viewBox="0 0 24 24" class="size-6 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM8 12l3 3 5-6" />
+      </svg>
+
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium">«{{ sent.title }}» — не в этот день</p>
+        <p class="text-xs muted">
+          задача легла на {{ formatHuman(sent.date, false) }},
+          {{ weekdayShort(sent.date).toLowerCase() }} — в списке ниже её не будет
+        </p>
+      </div>
+
+      <NuxtLink :to="{ path: '/day', query: { date: sent.date } }" class="btn-primary shrink-0 px-4 py-2.5">
+        Открыть {{ formatHuman(sent.date, false) }}
       </NuxtLink>
-    </p>
+
+      <button type="button" class="btn-quiet shrink-0 px-1.5" aria-label="Скрыть" @click="sent = null">✕</button>
+    </div>
 
     <ModalSheet v-if="open" wide :title="statusLine" @close="closeSheet">
       <form @submit.prevent="submit">

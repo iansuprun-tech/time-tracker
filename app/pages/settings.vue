@@ -41,6 +41,7 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
         :items="presets?.places ?? []"
         :reload="reload"
       />
+      <TrashList />
       <ChangePassword />
     </div>
 

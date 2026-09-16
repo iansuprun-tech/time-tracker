@@ -73,6 +73,8 @@ export const blocks = pgTable(
     status: text("status").notNull().default("todo"),
     isUnplanned: boolean("is_unplanned").notNull().default(false),
     sort: integer("sort").notNull().default(0),
+    /** удалённая задача лежит в корзине: строка жива, из списков выпала */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("blocks_day_idx").on(t.dayId)],

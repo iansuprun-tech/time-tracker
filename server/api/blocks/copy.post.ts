@@ -1,7 +1,7 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../utils/db";
 import { blocks } from "../../utils/schema";
-import { ensureDay, findDay } from "../../utils/day";
+import { ensureDay, findDay, notDeleted } from "../../utils/day";
 import { requireUserId } from "../../utils/session";
 import { fail } from "../../utils/http";
 
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const source = await db
     .select()
     .from(blocks)
-    .where(eq(blocks.dayId, from.id))
+    .where(and(eq(blocks.dayId, from.id), notDeleted))
     .orderBy(asc(blocks.sort), asc(blocks.id));
 
   // отменённое и незапланированное не тащим — копируем именно план, а не историю дня

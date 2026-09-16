@@ -302,15 +302,27 @@ const peekId = ref<number | null>(null);
     <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="page-title">{{ data?.readonly ? data?.owner?.name : "Календарь" }}</h1>
-        <div class="mt-1 flex items-center gap-1 text-sm muted">
-          <span>{{ title }}</span>
-          <button class="btn-quiet px-1.5" aria-label="Прошлая неделя" @click="shiftWeek(-1)">‹</button>
-          <button class="btn-quiet px-1.5" aria-label="Следующая неделя" @click="shiftWeek(1)">›</button>
+        <div class="mt-1.5 flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1">
+            <button class="btn-soft size-9 px-0" aria-label="Прошлая неделя" @click="shiftWeek(-1)">
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button class="btn-soft size-9 px-0" aria-label="Следующая неделя" @click="shiftWeek(1)">
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          <span class="text-base">{{ title }}</span>
+
           <button
-            class="btn-quiet"
+            class="btn-soft px-3 py-1.5 text-sm"
             @click="router.push({ query: { ...(ownerId ? { userId: String(ownerId) } : {}) } })"
           >
-            сегодня
+            Эта неделя
           </button>
         </div>
       </div>

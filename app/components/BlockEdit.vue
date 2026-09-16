@@ -7,6 +7,8 @@
 const props = defineProps<{ blockId: number }>();
 const emit = defineEmits<{ close: []; saved: []; deleted: [] }>();
 
+const { remember } = useTrash();
+
 const { data: presets } = useFetch("/api/presets", { key: `presets-edit-${props.blockId}` });
 const projectOptions = computed(() => (presets.value?.projects ?? []).map((p) => p.name));
 const categoryOptions = computed(() => (presets.value?.categories ?? []).map((c) => c.name));
@@ -179,6 +181,7 @@ async function remove() {
   removing.value = true;
   try {
     await $fetch<{ ok: boolean }>("/api/blocks/delete", { method: "POST", body: { id: props.blockId } });
+    remember(props.blockId, title.value.trim());
     emit("deleted");
     emit("close");
   } catch (e) {
@@ -280,7 +283,7 @@ async function remove() {
           Удалить задачу
         </button>
         <div v-else class="flex items-center gap-2 text-xs">
-          <span class="muted">Удалить вместе с заметками и комментариями?</span>
+          <span class="muted">Удалить? Заметки и комментарии сохранятся в корзине.</span>
           <button type="button" :disabled="removing" class="btn-soft px-2 py-1 text-xs text-red-600 dark:text-red-400" @click="remove">
             <Spinner v-if="removing" />
             да

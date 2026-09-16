@@ -57,6 +57,9 @@ const commentCount = computed(
 const threadOpen = ref(false);
 /** правка отдельным окном: в строке блока для названия и проекта места нет */
 const editing = ref(false);
+/** ✕ рядом с карандашом легко поймать пальцем мимо — спрашиваем */
+const confirmRemove = ref(false);
+const { remember } = useTrash();
 const threadCount = computed(() => props.notes.length + commentCount.value);
 /** читать нечего — открываем сразу на ввод, иначе не воруем фокус и клавиатуру */
 const threadEmpty = computed(() => threadCount.value === 0);
@@ -158,8 +161,14 @@ function stopTimer() {
   return call(() => $fetch<{ ok: boolean }>("/api/timer/stop", { method: "POST" }));
 }
 const toggleDone = () => patch({ status: props.block.status === "done" ? "todo" : "done" });
-const remove = () =>
-  call(() => $fetch<{ ok: boolean }>("/api/blocks/delete", { method: "POST", body: { id: props.block.id } }));
+async function remove() {
+  const title = props.block.title;
+  const id = props.block.id;
+  await call(() => $fetch<{ ok: boolean }>("/api/blocks/delete", { method: "POST", body: { id } }));
+  confirmRemove.value = false;
+  // удаление мягкое: всплывашка внизу предлагает вернуть, пока не передумали
+  remember(id, title);
+}
 
 function openFact() {
   factValue.value = fact.value;
@@ -418,17 +427,29 @@ async function saveNote() {
               </svg>
             </button>
 
-            <!-- вычистить черновик плана хочется в один клик, без захода в правку -->
-            <button
-              v-if="mode === 'plan'"
-              :disabled="busy"
-              class="btn-soft px-2 py-1 text-xs"
-              aria-label="Удалить блок"
-              @click="remove"
-            >
-              <Spinner v-if="busy" />
-              <template v-else>✕</template>
-            </button>
+            <!-- вычистить черновик плана хочется быстро, но не мимо пальца -->
+            <template v-if="mode === 'plan'">
+              <button
+                v-if="!confirmRemove"
+                type="button"
+                class="btn-soft px-2.5 py-1 text-xs"
+                aria-label="Удалить блок"
+                @click="confirmRemove = true"
+              >
+                ✕
+              </button>
+              <template v-else>
+                <button
+                  :disabled="busy"
+                  class="btn-soft px-2.5 py-1 text-xs text-red-600 dark:text-red-400"
+                  @click="remove"
+                >
+                  <Spinner v-if="busy" />
+                  удалить
+                </button>
+                <button type="button" class="btn-quiet" @click="confirmRemove = false">нет</button>
+              </template>
+            </template>
           </div>
         </div>
 

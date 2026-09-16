@@ -3,6 +3,7 @@ import { db } from "../utils/db";
 import { users, days, blocks, timeEntries } from "../utils/schema";
 import { requireUserId } from "../utils/session";
 import { assertCanView } from "../utils/access";
+import { notDeleted } from "../utils/day";
 import { fail } from "../utils/http";
 import { shiftDays } from "../../shared/utils/date";
 
@@ -44,7 +45,7 @@ export default defineEventHandler(async (event) => {
       .from(blocks)
       .innerJoin(days, eq(days.id, blocks.dayId))
       .leftJoin(timeEntries, eq(timeEntries.blockId, blocks.id))
-      .where(and(eq(days.userId, ownerId), gte(days.date, since), lte(days.date, to)))
+      .where(and(eq(days.userId, ownerId), gte(days.date, since), lte(days.date, to), notDeleted))
       .orderBy(asc(days.date), asc(blocks.sort), asc(blocks.id)),
     db
       .select({

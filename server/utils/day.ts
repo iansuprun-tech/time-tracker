@@ -3,6 +3,13 @@ import { db } from "./db";
 import { days, blocks, timeEntries, notes, comments } from "./schema";
 import { fail } from "./http";
 
+/**
+ * Удаление у нас мягкое: строка остаётся, но из всех списков выпадает.
+ * Условие одно на весь сервер — забыть его в одном запросе значит вернуть
+ * удалённую задачу обратно на экран.
+ */
+export const notDeleted = isNull(blocks.deletedAt);
+
 /** Только чтение: просмотр даты не должен плодить пустые дни в базе */
 export async function findDay(userId: number, date: string) {
   const [row] = await db
@@ -59,7 +66,7 @@ export async function getBlocks(dayId: number) {
     })
     .from(blocks)
     .leftJoin(timeEntries, eq(timeEntries.blockId, blocks.id))
-    .where(eq(blocks.dayId, dayId))
+    .where(and(eq(blocks.dayId, dayId), notDeleted))
     .groupBy(blocks.id)
     .orderBy(asc(blocks.sort), asc(blocks.id));
 
@@ -83,7 +90,7 @@ export async function getBlockNotes(dayId: number) {
     })
     .from(notes)
     .innerJoin(blocks, eq(blocks.id, notes.blockId))
-    .where(eq(blocks.dayId, dayId))
+    .where(and(eq(blocks.dayId, dayId), notDeleted))
     .orderBy(asc(notes.createdAt));
 }
 
@@ -98,6 +105,7 @@ export async function findStaleEntry(userId: number) {
       and(
         isNull(timeEntries.endedAt),
         eq(days.userId, userId),
+        notDeleted,
         sql`${timeEntries.startedAt} < now() - interval '10 hours'`,
       ),
     );
@@ -143,6 +151,8 @@ export async function dropDayIfEmpty(dayId: number) {
   const [day] = await db.select().from(days).where(eq(days.id, dayId));
   if (!day || day.status !== "draft" || day.mood !== null || day.dayNote !== null) return;
 
+  // считаем и удалённые: день держит корзину, а каскад по days.id
+  // унёс бы вместе с ним всё, что в ней лежит
   const [blockAgg] = await db
     .select({ count: sql<number>`count(*)` })
     .from(blocks)

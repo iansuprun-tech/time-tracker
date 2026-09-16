@@ -106,11 +106,35 @@ async function reload(part: "day" | "comments" = "day") {
             · закрыт {{ data?.day.mood ? MOOD_EMOJI[data.day.mood] : "" }}
           </span>
         </h1>
-        <div class="mt-1 flex items-center gap-1 text-sm muted">
-          <span>{{ formatHuman(date) }}</span>
-          <button class="btn-quiet px-1.5" aria-label="Предыдущий день" @click="shift(-1)">‹</button>
-          <button class="btn-quiet px-1.5" aria-label="Следующий день" @click="shift(1)">›</button>
-          <button v-if="!isToday" class="btn-quiet" @click="goToday">сегодня</button>
+<!--
+          Стрелки были значками «‹ ›» в полтора пикселя: чтобы перелистнуть день,
+          приходилось целиться. Теперь это кнопки в размер пальца.
+        -->
+        <div class="mt-1.5 flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1">
+            <button
+              class="btn-soft size-9 px-0"
+              aria-label="Предыдущий день"
+              @click="shift(-1)"
+            >
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              class="btn-soft size-9 px-0"
+              aria-label="Следующий день"
+              @click="shift(1)"
+            >
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          <span class="text-base">{{ formatHuman(date) }}</span>
+
+          <button v-if="!isToday" class="btn-soft px-3 py-1.5 text-sm" @click="goToday">Сегодня</button>
         </div>
       </div>
 

@@ -128,5 +128,7 @@ async function logout() {
 
       <slot />
     </div>
+
+    <UndoDelete />
   </div>
 </template>

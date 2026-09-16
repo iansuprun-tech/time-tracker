@@ -108,6 +108,25 @@ async function openSheet() {
 
 const closeSheet = () => (open.value = false);
 
+/**
+ * Хоткей на создание задачи. Ловим по коду клавиши, а не по символу: на русской
+ * раскладке та же клавиша даёт «т», и сравнение с «n» молча перестало бы работать
+ * ровно у того, кто в этой раскладке и сидит.
+ */
+function onHotkey(e: KeyboardEvent) {
+  if (e.code !== "KeyN" || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+  if (open.value || modalsOpen()) return;
+
+  // в поле ввода «н» должно печататься, а не открывать окно
+  const target = e.target as HTMLElement | null;
+  if (target?.isContentEditable || /^(input|textarea|select)$/i.test(target?.tagName ?? "")) return;
+
+  e.preventDefault();
+  openSheet();
+}
+onMounted(() => document.addEventListener("keydown", onHotkey));
+onBeforeUnmount(() => document.removeEventListener("keydown", onHotkey));
+
 function openTime() {
   timeOpen.value = true;
   if (!startAt.value && !endAt.value) suggestWindow();
@@ -216,6 +235,8 @@ async function submit() {
         <path d="M12 5v14M5 12h14" />
       </svg>
       {{ label }}
+      <!-- на телефоне клавиатуры под рукой нет, подсказка там только мусор -->
+      <span class="hidden text-xs muted sm:inline">(N)</span>
     </button>
 
     <!--

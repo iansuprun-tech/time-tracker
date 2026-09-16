@@ -8,6 +8,11 @@
  */
 const stack = ref<symbol[]>([]);
 
+/** Открыта ли хоть одна модалка — чтобы хоткеи не срабатывали поверх неё */
+export function modalsOpen() {
+  return stack.value.length > 0;
+}
+
 export function useModal(close: () => void) {
   const id = Symbol("modal");
 

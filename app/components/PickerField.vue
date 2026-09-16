@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * Атрибут задачи: пока не заполнен — тихий чип с пунктиром, по клику
- * открывается список уже заведённых значений и строка, чтобы завести новое.
+ * открывается модалка со списком заведённых значений и строкой, чтобы
+ * завести новое.
  *
  * Нативный datalist тут не годится: на телефоне список подсказок не всплывает,
  * и поле выглядит просто пустой строкой — по ней не догадаешься, что проекты
@@ -24,10 +25,7 @@ const emit = defineEmits<{ "update:modelValue": [string] }>();
 
 const open = ref(false);
 const draft = ref("");
-const root = ref<HTMLElement | null>(null);
-const panel = ref<HTMLElement | null>(null);
 const input = ref<HTMLInputElement | null>(null);
-const { style } = usePopover(root, open, 208);
 
 const show = (value: string) => props.optionLabel?.(value) ?? value;
 
@@ -43,10 +41,9 @@ const exists = computed(() =>
   (props.options ?? []).some((o) => o.toLowerCase() === draft.value.trim().toLowerCase()),
 );
 
-async function toggle() {
-  open.value = !open.value;
-  if (!open.value) return;
+async function openModal() {
   draft.value = "";
+  open.value = true;
   await nextTick();
   input.value?.focus();
 }
@@ -61,79 +58,63 @@ function create() {
   const value = draft.value.trim();
   if (value) choose(value);
 }
-
-function onDocumentPointer(e: PointerEvent) {
-  const t = e.target as Node;
-  // список живёт в <body>, поэтому «снаружи» — это снаружи обоих
-  if (root.value?.contains(t) || panel.value?.contains(t)) return;
-  open.value = false;
-}
-onMounted(() => document.addEventListener("pointerdown", onDocumentPointer));
-onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPointer));
 </script>
 
 <template>
-  <div ref="root" class="relative">
-    <button type="button" :class="modelValue ? 'chip-set' : 'chip-empty'" @click="toggle">
+  <div class="contents">
+    <button type="button" :class="modelValue ? 'chip-set' : 'chip-empty'" @click="openModal">
       <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path :d="icon" />
       </svg>
       {{ modelValue ? show(modelValue) : label }}
     </button>
 
-    <Teleport v-if="open" to="body">
-      <div
-        ref="panel"
-        :style="style"
-        class="z-[60] flex flex-col overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-xl dark:border-white/15 dark:bg-neutral-800"
-      >
-        <ul v-if="shown.length" class="min-h-0 flex-1 overflow-auto">
-          <li v-for="o in shown" :key="o">
-            <button
-              type="button"
-              class="w-full px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
-              :class="o === modelValue ? 'font-medium text-emerald-700 dark:text-emerald-400' : ''"
-              @click="choose(o)"
-            >
-              {{ show(o) }}
-            </button>
-          </li>
-        </ul>
-
-        <p v-else class="px-2.5 py-1.5 text-[11px] muted">
-          {{ draft.trim() ? "Ничего не нашлось" : "Пока пусто — заведите первый" }}
-        </p>
-
-        <div class="mt-1 flex shrink-0 gap-1 border-t border-black/10 px-1.5 pb-1 pt-1.5 dark:border-white/15">
-          <input
-            ref="input"
-            v-model="draft"
-            :placeholder="addLabel"
-            :inputmode="numeric ? 'numeric' : undefined"
-            class="field min-w-0 flex-1 py-1 text-xs"
-            @keydown.enter.prevent="create"
-            @keydown.esc.stop="open = false"
-          />
-          <button
-            type="button"
-            :disabled="!draft.trim() || exists"
-            class="btn-soft shrink-0 px-2 py-1 text-xs"
-            :title="exists ? 'Такое уже есть в списке' : 'Завести новое'"
-            @click="create"
-          >
-            +
-          </button>
-        </div>
-
+    <ModalSheet v-if="open" :title="label" @close="open = false">
+      <div class="mb-2 flex gap-1">
+        <input
+          ref="input"
+          v-model="draft"
+          :placeholder="addLabel"
+          :inputmode="numeric ? 'numeric' : undefined"
+          class="field min-w-0 flex-1 py-1.5 text-sm"
+          @keydown.enter.prevent="create"
+        />
         <button
-          v-if="modelValue"
           type="button"
-          class="w-full shrink-0 px-2.5 py-1 text-left text-[11px] muted transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
-          @click="choose('')"
+          :disabled="!draft.trim() || exists"
+          class="btn-soft shrink-0 px-3 py-1.5 text-sm"
+          :title="exists ? 'Такое уже есть в списке' : 'Завести новое'"
+          @click="create"
         >
-          убрать
+          +
         </button>
       </div>
-    </Teleport>
+
+      <ul v-if="shown.length" class="-mx-1">
+        <li v-for="o in shown" :key="o">
+          <button
+            type="button"
+            class="w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
+            :class="o === modelValue ? 'font-medium text-emerald-700 dark:text-emerald-400' : ''"
+            @click="choose(o)"
+          >
+            {{ show(o) }}
+          </button>
+        </li>
+      </ul>
+
+      <p v-else class="px-1 py-2 text-xs muted">
+        {{ draft.trim() ? "Ничего не нашлось — можно завести" : "Пока пусто — заведите первый" }}
+      </p>
+
+      <button
+        v-if="modelValue"
+        type="button"
+        class="mt-2 w-full rounded-lg border-t border-black/[0.06] px-3 py-2 text-left text-xs muted transition-colors hover:bg-black/[0.05] dark:border-white/10 dark:hover:bg-white/10"
+        @click="choose('')"
+      >
+        убрать
+      </button>
+    </ModalSheet>
   </div>
 </template>

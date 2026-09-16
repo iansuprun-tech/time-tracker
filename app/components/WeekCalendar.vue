@@ -22,7 +22,7 @@ const query = computed(() => ({
   ...(props.ownerId ? { userId: String(props.ownerId) } : {}),
 }));
 
-const { data } = await useFetch("/api/week", { query });
+const { data, refresh } = await useFetch("/api/week", { query });
 
 const dates = computed(() => Array.from({ length: 7 }, (_, i) => shiftDays(from.value, i)));
 const today = computed(() => localDate());
@@ -459,6 +459,13 @@ const peekId = ref<number | null>(null);
       На этой неделе ещё ничего не запланировано.
     </p>
 
-    <BlockPeek v-if="peekId" :key="peekId" :block-id="peekId" :day-path="dayPath" @close="peekId = null" />
+    <BlockPeek
+      v-if="peekId"
+      :key="peekId"
+      :block-id="peekId"
+      :day-path="dayPath"
+      @changed="refresh"
+      @close="peekId = null"
+    />
   </main>
 </template>

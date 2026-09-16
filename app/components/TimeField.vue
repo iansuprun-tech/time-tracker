@@ -2,8 +2,11 @@
 /**
  * Поле времени вместо нативного input[type=time]: тот показывает «--:-- --»
  * и просит попасть в крошечные стрелки, а формат берёт из локали браузера.
- * Здесь: печатаешь как удобно («1030», «10.30», «9») — получаешь 10:30,
- * а рядом список получасовок, чтобы обычный случай закрывался одним кликом.
+ *
+ * Здесь кнопка со временем, а по клику модалка: печатаешь как удобно
+ * («1030», «10.30», «9») — получаешь 10:30, а рядом список получасовок,
+ * чтобы обычный случай закрывался одним касанием. У поля «по» в списке
+ * сразу видна длительность — «+30м», «1ч».
  */
 const props = defineProps<{
   modelValue: string;
@@ -13,11 +16,9 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ "update:modelValue": [string] }>();
 
-const text = ref(props.modelValue);
 const open = ref(false);
-const root = ref<HTMLElement | null>(null);
-const panel = ref<HTMLElement | null>(null);
-const { style } = usePopover(root, open, 128);
+const text = ref(props.modelValue);
+const input = ref<HTMLInputElement | null>(null);
 
 watch(
   () => props.modelValue,
@@ -37,16 +38,24 @@ function normalize(raw: string) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+async function openModal() {
+  text.value = props.modelValue;
+  open.value = true;
+  await nextTick();
+  input.value?.focus();
+  input.value?.select();
+}
+
 function commit() {
   const value = normalize(text.value);
   text.value = value;
+  open.value = false;
   if (value !== props.modelValue) emit("update:modelValue", value);
 }
 
 function choose(value: string) {
   text.value = value;
   commit();
-  open.value = false;
 }
 
 /** Шаг полчаса: попасть в редкое «10:07» можно руками, а не прокруткой списка */
@@ -70,49 +79,43 @@ function hm(min: number) {
   const rest = min % 60;
   return rest ? `${Math.floor(min / 60)}ч ${rest}м` : `${Math.floor(min / 60)}ч`;
 }
-
-function onDocumentPointer(e: PointerEvent) {
-  const t = e.target as Node;
-  // список живёт в <body>, поэтому «снаружи» — это снаружи обоих
-  if (root.value?.contains(t) || panel.value?.contains(t)) return;
-  open.value = false;
-}
-onMounted(() => document.addEventListener("pointerdown", onDocumentPointer));
-onBeforeUnmount(() => document.removeEventListener("pointerdown", onDocumentPointer));
 </script>
 
 <template>
-  <div ref="root" class="relative">
-    <input
-      v-model="text"
-      inputmode="numeric"
-      maxlength="5"
-      :placeholder="placeholder ?? '10:00'"
+  <div class="contents">
+    <button
+      type="button"
       class="field w-[4.75rem] py-1 text-center tabular-nums"
-      @focus="open = true"
-      @blur="commit"
-      @keydown.enter.prevent="commit(); open = false"
-      @keydown.esc="open = false"
-    />
+      :class="modelValue ? '' : 'text-black/35 dark:text-white/30'"
+      @click="openModal"
+    >
+      {{ modelValue || placeholder || "10:00" }}
+    </button>
 
-    <Teleport v-if="open" to="body">
-      <ul
-        ref="panel"
-        :style="style"
-        class="z-[60] overflow-auto rounded-lg border border-black/10 bg-white py-1 shadow-xl dark:border-white/15 dark:bg-neutral-800"
-      >
-      <li v-for="o in options" :key="o.value">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-xs transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
-          :class="o.value === modelValue ? 'font-medium text-emerald-700 dark:text-emerald-400' : ''"
-          @mousedown.prevent="choose(o.value)"
-        >
-          <span class="tabular-nums">{{ o.value }}</span>
-          <span v-if="o.hint" class="muted">{{ o.hint }}</span>
-        </button>
+    <ModalSheet v-if="open" :title="placeholder === 'по' ? 'Время «по»' : 'Время «с»'" @close="commit">
+      <input
+        ref="input"
+        v-model="text"
+        inputmode="numeric"
+        maxlength="5"
+        :placeholder="placeholder ?? '10:00'"
+        class="field mb-2 w-full py-2 text-center text-lg tabular-nums"
+        @keydown.enter.prevent="commit"
+      />
+
+      <ul class="-mx-1">
+        <li v-for="o in options" :key="o.value">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
+            :class="o.value === modelValue ? 'font-medium text-emerald-700 dark:text-emerald-400' : ''"
+            @click="choose(o.value)"
+          >
+            <span class="tabular-nums">{{ o.value }}</span>
+            <span v-if="o.hint" class="text-xs muted">{{ o.hint }}</span>
+          </button>
         </li>
       </ul>
-    </Teleport>
+    </ModalSheet>
   </div>
 </template>

@@ -9,7 +9,7 @@ const props = defineProps<{
   /** куда ведёт «открыть день»: свой день или чужой на просмотр */
   dayPath: string;
 }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; changed: [] }>();
 
 type Loaded = {
   block: {
@@ -85,105 +85,98 @@ const fact = computed(() => {
   return b.actualMin ?? b.trackedMin;
 });
 
-function onKey(e: KeyboardEvent) {
-  if (e.key === "Escape") emit("close");
+/** правка открывается поверх карточки: закрылась — перечитываем показанное */
+const editing = ref(false);
+
+async function afterEdit() {
+  data.value = null;
+  await load();
+  emit("changed");
 }
-onMounted(() => {
-  document.addEventListener("keydown", onKey);
-  document.body.style.overflow = "hidden";
-});
-onBeforeUnmount(() => {
-  document.removeEventListener("keydown", onKey);
-  document.body.style.overflow = "";
-});
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div class="absolute inset-0 bg-black/40" @click="emit('close')" />
+  <ModalSheet wide :title="whenLabel" @close="emit('close')">
+    <p v-if="failed" class="py-6 text-center text-sm muted">Задача не открылась</p>
 
-      <div
-        class="relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl dark:bg-neutral-900 sm:max-w-lg sm:rounded-2xl"
-      >
-        <div class="shrink-0 px-4 pt-3 sm:px-5">
-          <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 dark:bg-white/20 sm:hidden" />
-          <div class="flex items-start justify-between gap-2">
-            <p class="text-xs muted">{{ whenLabel }}</p>
-            <button type="button" class="btn-quiet px-1.5" aria-label="Закрыть" @click="emit('close')">✕</button>
-          </div>
-        </div>
-
-        <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-5">
-          <p v-if="failed" class="py-6 text-center text-sm muted">Задача не открылась</p>
-
-          <div v-else-if="!data" class="flex justify-center py-8">
-            <Spinner />
-          </div>
-
-          <template v-else>
-            <h2 class="py-1 text-lg" :class="data.block.status === 'done' || data.block.status === 'dropped' ? 'line-through' : ''">
-              {{ data.block.title }}
-            </h2>
-
-            <div class="mt-1 flex flex-wrap items-center gap-2">
-              <span
-                v-if="data.block.project"
-                class="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
-              >
-                {{ data.block.project }}
-              </span>
-              <span v-if="data.block.category" class="chip">{{ data.block.category }}</span>
-              <span v-if="data.block.location" class="chip">📍 {{ data.block.location }}</span>
-              <span v-if="data.block.kind === 'offline'" class="chip">офлайн</span>
-              <span class="chip">{{ STATUS_LABEL[data.block.status] ?? data.block.status }}</span>
-              <span
-                v-if="data.block.isUnplanned"
-                class="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
-              >
-                вне плана
-              </span>
-            </div>
-
-            <div class="mt-3 flex flex-wrap items-center gap-3 text-xs muted">
-              <span v-if="windowLabel">📌 {{ windowLabel }}</span>
-              <span v-if="data.block.plannedMin != null">план {{ data.block.plannedMin }}м</span>
-              <span v-if="fact > 0">факт {{ fact }}м</span>
-              <span v-if="data.block.runningSince" class="text-red-600 dark:text-red-400">идёт сейчас</span>
-            </div>
-
-            <ul
-              v-if="data.notes.length"
-              class="mt-4 space-y-1 border-l-2 border-black/10 pl-2 text-xs text-black/65 dark:border-white/15 dark:text-white/65"
-            >
-              <li v-for="n in data.notes" :key="n.id" class="whitespace-pre-wrap">{{ n.text }}</li>
-            </ul>
-
-            <div class="mt-4 border-t border-black/10 pt-3 dark:border-white/15">
-              <CommentThread
-                target-type="block"
-                :target-id="data.block.id"
-                :comments="data.comments"
-                compact
-                @added="load"
-              />
-            </div>
-          </template>
-        </div>
-
-        <div
-          class="shrink-0 border-t border-black/[0.06] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/10 sm:px-5"
-        >
-          <NuxtLink
-            v-if="data"
-            :to="{ path: dayPath, query: { date: data.block.date } }"
-            class="btn-soft w-full"
-            @click="emit('close')"
-          >
-            Открыть день →
-          </NuxtLink>
-        </div>
-      </div>
+    <div v-else-if="!data" class="flex justify-center py-8">
+      <Spinner />
     </div>
-  </Teleport>
+
+    <template v-else>
+      <h2
+        class="py-1 text-lg"
+        :class="data.block.status === 'done' || data.block.status === 'dropped' ? 'line-through' : ''"
+      >
+        {{ data.block.title }}
+      </h2>
+
+      <div class="mt-1 flex flex-wrap items-center gap-2">
+        <span
+          v-if="data.block.project"
+          class="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
+        >
+          {{ data.block.project }}
+        </span>
+        <span v-if="data.block.category" class="chip">{{ data.block.category }}</span>
+        <span v-if="data.block.location" class="chip">📍 {{ data.block.location }}</span>
+        <span v-if="data.block.kind === 'offline'" class="chip">офлайн</span>
+        <span class="chip">{{ STATUS_LABEL[data.block.status] ?? data.block.status }}</span>
+        <span
+          v-if="data.block.isUnplanned"
+          class="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
+        >
+          вне плана
+        </span>
+      </div>
+
+      <div class="mt-3 flex flex-wrap items-center gap-3 text-xs muted">
+        <span v-if="windowLabel">📌 {{ windowLabel }}</span>
+        <span v-if="data.block.plannedMin != null">план {{ data.block.plannedMin }}м</span>
+        <span v-if="fact > 0">факт {{ fact }}м</span>
+        <span v-if="data.block.runningSince" class="text-red-600 dark:text-red-400">идёт сейчас</span>
+      </div>
+
+      <ul
+        v-if="data.notes.length"
+        class="mt-4 space-y-1 border-l-2 border-black/10 pl-2 text-xs text-black/65 dark:border-white/15 dark:text-white/65"
+      >
+        <li v-for="n in data.notes" :key="n.id" class="whitespace-pre-wrap">{{ n.text }}</li>
+      </ul>
+
+      <div class="mt-4 border-t border-black/10 pt-3 dark:border-white/15">
+        <CommentThread
+          target-type="block"
+          :target-id="data.block.id"
+          :comments="data.comments"
+          compact
+          @added="load"
+        />
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="flex items-center gap-2">
+        <NuxtLink
+          v-if="data"
+          :to="{ path: dayPath, query: { date: data.block.date } }"
+          class="btn-soft flex-1"
+          @click="emit('close')"
+        >
+          Открыть день →
+        </NuxtLink>
+        <button v-if="data && !data.readonly" type="button" class="btn-primary px-4" @click="editing = true">
+          Править
+        </button>
+      </div>
+    </template>
+
+    <BlockEdit
+      v-if="editing"
+      :block-id="blockId"
+      @close="editing = false"
+      @saved="afterEdit"
+      @deleted="emit('changed'); emit('close')"
+    />
+  </ModalSheet>
 </template>

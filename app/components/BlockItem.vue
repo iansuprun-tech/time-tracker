@@ -55,6 +55,8 @@ const commentCount = computed(
  * раздувает список и план перестаёт читаться с одного взгляда.
  */
 const threadOpen = ref(false);
+/** правка отдельным окном: в строке блока для названия и проекта места нет */
+const editing = ref(false);
 const threadCount = computed(() => props.notes.length + commentCount.value);
 /** читать нечего — открываем сразу на ввод, иначе не воруем фокус и клавиатуру */
 const threadEmpty = computed(() => threadCount.value === 0);
@@ -404,9 +406,24 @@ async function saveNote() {
             </button>
 
             <button
+              v-if="mode !== 'view'"
+              type="button"
+              class="btn-soft px-2.5 py-1 text-xs text-black/40 dark:text-white/40"
+              aria-label="Править задачу"
+              title="Править задачу"
+              @click="editing = true"
+            >
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+              </svg>
+            </button>
+
+            <!-- вычистить черновик плана хочется в один клик, без захода в правку -->
+            <button
               v-if="mode === 'plan'"
               :disabled="busy"
               class="btn-soft px-2 py-1 text-xs"
+              aria-label="Удалить блок"
               @click="remove"
             >
               <Spinner v-if="busy" />
@@ -414,6 +431,14 @@ async function saveNote() {
             </button>
           </div>
         </div>
+
+        <BlockEdit
+          v-if="editing"
+          :block-id="block.id"
+          @close="editing = false"
+          @saved="reload()"
+          @deleted="reload()"
+        />
 
         <div
           v-if="threadOpen"

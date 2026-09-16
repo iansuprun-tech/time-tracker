@@ -108,20 +108,6 @@ async function openSheet() {
 
 const closeSheet = () => (open.value = false);
 
-// фон под шторкой не должен уезжать вместе с пальцем
-watch(open, (v) => {
-  document.body.style.overflow = v ? "hidden" : "";
-});
-
-function onKey(e: KeyboardEvent) {
-  if (e.key === "Escape" && open.value) closeSheet();
-}
-onMounted(() => document.addEventListener("keydown", onKey));
-onBeforeUnmount(() => {
-  document.removeEventListener("keydown", onKey);
-  document.body.style.overflow = "";
-});
-
 function openTime() {
   timeOpen.value = true;
   if (!startAt.value && !endAt.value) suggestWindow();
@@ -239,23 +225,8 @@ async function submit() {
       </NuxtLink>
     </p>
 
-    <Teleport v-if="open" to="body">
-      <div class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-        <div class="absolute inset-0 bg-black/40" @click="closeSheet" />
-
-        <form
-          class="relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl dark:bg-neutral-900 sm:max-w-lg sm:rounded-2xl"
-          @submit.prevent="submit"
-        >
-          <div class="shrink-0 px-4 pt-3 sm:px-5">
-            <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 dark:bg-white/20 sm:hidden" />
-            <div class="flex items-center justify-between gap-2">
-              <p class="text-xs muted">{{ statusLine }}</p>
-              <button type="button" class="btn-quiet px-1.5" aria-label="Закрыть" @click="closeSheet">✕</button>
-            </div>
-          </div>
-
-          <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-5">
+    <ModalSheet v-if="open" wide :title="statusLine" @close="closeSheet">
+      <form @submit.prevent="submit">
             <input
               ref="titleInput"
               v-model="title"
@@ -333,26 +304,24 @@ async function submit() {
               />
             </div>
 
-            <textarea
-              v-model="description"
-              rows="2"
-              placeholder="Описание"
-              class="mt-3 w-full resize-none border-0 bg-transparent text-sm outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
-            />
-          </div>
+        <textarea
+          v-model="description"
+          rows="2"
+          placeholder="Описание"
+          class="mt-3 w-full resize-none border-0 bg-transparent text-sm outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
+        />
+      </form>
 
-          <div
-            class="flex shrink-0 items-center justify-between gap-3 border-t border-black/[0.06] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/10 sm:px-5"
-          >
-            <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>
-            <p v-else class="text-xs muted">{{ placement }}</p>
-            <button :disabled="saving || !title.trim()" class="btn-primary shrink-0 px-4">
-              <Spinner v-if="saving" />
-              Создать
-            </button>
-          </div>
-        </form>
-      </div>
-    </Teleport>
+      <template #footer>
+        <div class="flex items-center justify-between gap-3">
+          <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>
+          <p v-else class="text-xs muted">{{ placement }}</p>
+          <button :disabled="saving || !title.trim()" class="btn-primary shrink-0 px-4" @click="submit">
+            <Spinner v-if="saving" />
+            Создать
+          </button>
+        </div>
+      </template>
+    </ModalSheet>
   </div>
 </template>

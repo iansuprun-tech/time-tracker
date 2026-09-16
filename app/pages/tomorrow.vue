@@ -66,6 +66,7 @@ async function copyFromToday() {
         v-for="b in ordered"
         :key="b.id"
         :block="b"
+        :date="date"
         :notes="notesFor(b.id)"
         :mode="'plan'"
         :reload="async () => { await refresh(); }"

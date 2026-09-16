@@ -86,6 +86,19 @@ const unplannedMin = computed(() =>
 
 const goToday = () => router.push({ query: { ...route.query, date: localDate() } });
 
+/**
+ * Итоги дня карточками, а не четырьмя подписями в ряд: цветная полоска слева
+ * разводит их взглядом, иначе «0/4 480м 19м» читается одной строкой цифр.
+ */
+const stats = computed(() => [
+  { label: "Готово", value: `${doneCount.value}/${blocks.value.length}`, accent: "bg-emerald-500" },
+  { label: "План", value: `${plannedMin.value}м`, accent: "bg-sky-500" },
+  { label: "Факт", value: `${factMin.value}м`, accent: "bg-violet-500" },
+  ...(unplannedMin.value > 0
+    ? [{ label: "Вне плана", value: `${unplannedMin.value}м`, accent: "bg-amber-500" }]
+    : []),
+]);
+
 function shift(days: number) {
   const [y, m, d] = date.value.split("-").map(Number);
   const next = new Date(y!, m! - 1, d! + days);
@@ -153,23 +166,16 @@ async function reload(part: "day" | "comments" = "day") {
         </div>
       </div>
 
-      <div v-if="status !== 'draft'" class="flex gap-4 text-sm">
-        <div>
-          <div class="text-[11px] uppercase tracking-wide muted">готово</div>
-          <div class="font-medium tabular-nums">{{ doneCount }}/{{ blocks.length }}</div>
-        </div>
-        <div>
-          <div class="text-[11px] uppercase tracking-wide muted">план</div>
-          <div class="font-medium tabular-nums">{{ plannedMin }}м</div>
-        </div>
-        <div>
-          <div class="text-[11px] uppercase tracking-wide muted">факт</div>
-          <div class="font-medium tabular-nums">{{ factMin }}м</div>
-        </div>
-        <div v-if="unplannedMin > 0">
-          <div class="text-[11px] uppercase tracking-wide muted">вне плана</div>
-          <div class="font-medium tabular-nums text-amber-600 dark:text-amber-400">
-            {{ unplannedMin }}м
+      <div v-if="!loading && status !== 'draft'" class="flex flex-wrap gap-2">
+        <div
+          v-for="s in stats"
+          :key="s.label"
+          class="card flex items-stretch gap-2.5 overflow-hidden py-2 pr-4"
+        >
+          <span class="w-1 shrink-0 rounded-full" :class="s.accent" />
+          <div>
+            <div class="text-[11px] uppercase tracking-wide muted">{{ s.label }}</div>
+            <div class="text-base font-medium tabular-nums">{{ s.value }}</div>
           </div>
         </div>
       </div>
@@ -230,6 +236,7 @@ async function reload(part: "day" | "comments" = "day") {
         v-for="b in ordered"
         :key="b.id"
         :block="b"
+        :date="date"
         :notes="notesFor(b.id)"
         :slot-plan="slotFor(b.id)"
         :mode="blockMode"

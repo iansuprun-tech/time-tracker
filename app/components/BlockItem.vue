@@ -29,6 +29,8 @@ type Comment = {
 
 const props = defineProps<{
   block: Block;
+  /** день, которому принадлежит блок: у самого блока даты нет, она у дня */
+  date: string;
   notes: { id: number; text: string }[];
   /** edit — свой начатый день, plan — черновик плана, view — чужой день */
   mode: "edit" | "plan" | "view";
@@ -59,7 +61,21 @@ const threadOpen = ref(false);
 const editing = ref(false);
 /** ✕ рядом с карандашом легко поймать пальцем мимо — спрашиваем */
 const confirmRemove = ref(false);
+/** редкие действия по блоку: в ряду кнопок им места нет, а выкидывать жалко */
+const menuOpen = ref(false);
 const { remember } = useTrash();
+
+function closeMenu() {
+  menuOpen.value = false;
+  confirmRemove.value = false;
+}
+
+/** «Перенести на завтра» — то же, что сменить день в правке, но одним касанием */
+async function moveToTomorrow() {
+  const target = shiftDays(props.date, 1);
+  await patch({ date: target });
+  closeMenu();
+}
 const threadCount = computed(() => props.notes.length + commentCount.value);
 /** читать нечего — открываем сразу на ввод, иначе не воруем фокус и клавиатуру */
 const threadEmpty = computed(() => threadCount.value === 0);
@@ -130,6 +146,7 @@ async function call(fn: () => Promise<unknown>) {
 }
 
 type BlockPatch = {
+  date?: string;
   status?: string;
   location?: string | null;
   actualMin?: number | null;
@@ -170,7 +187,7 @@ async function remove() {
   const title = props.block.title;
   const id = props.block.id;
   await call(() => $fetch<{ ok: boolean }>("/api/blocks/delete", { method: "POST", body: { id } }));
-  confirmRemove.value = false;
+  closeMenu();
   // удаление мягкое: всплывашка внизу предлагает вернуть, пока не передумали
   remember(id, title);
 }
@@ -476,31 +493,86 @@ async function saveNote() {
               </svg>
             </button>
 
-            <!-- вычистить черновик плана хочется быстро, но не мимо пальца -->
-            <template v-if="mode === 'plan'">
+            <button
+              type="button"
+              class="btn-soft px-2 py-1 text-xs text-black/40 dark:text-white/40"
+              aria-label="Ещё действия"
+              title="Ещё действия"
+              @click="menuOpen = true"
+            >
+              <svg viewBox="0 0 24 24" class="size-4" fill="currentColor">
+                <circle cx="12" cy="5" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="12" cy="19" r="1.6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <ModalSheet v-if="menuOpen" :title="block.title" @close="closeMenu">
+          <ul class="-mx-1">
+            <li v-if="mode !== 'view'">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-black/[0.05] dark:hover:bg-white/10"
+                @click="closeMenu(); editing = true"
+              >
+                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+                </svg>
+                Править
+              </button>
+            </li>
+
+            <li v-if="mode !== 'view'">
+              <button
+                type="button"
+                :disabled="busy"
+                class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-black/[0.05] disabled:opacity-50 dark:hover:bg-white/10"
+                @click="moveToTomorrow"
+              >
+                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+                Перенести на завтра
+              </button>
+            </li>
+
+            <li v-if="mode !== 'view'" class="mt-1 border-t border-black/[0.06] pt-1 dark:border-white/10">
               <button
                 v-if="!confirmRemove"
                 type="button"
-                class="btn-soft px-2.5 py-1 text-xs"
-                aria-label="Удалить блок"
+                class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
                 @click="confirmRemove = true"
               >
-                ✕
+                <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+                </svg>
+                Удалить задачу
               </button>
-              <template v-else>
-                <button
-                  :disabled="busy"
-                  class="btn-soft px-2.5 py-1 text-xs text-red-600 dark:text-red-400"
-                  @click="remove"
-                >
-                  <Spinner v-if="busy" />
-                  удалить
-                </button>
-                <button type="button" class="btn-quiet" @click="confirmRemove = false">нет</button>
-              </template>
-            </template>
-          </div>
-        </div>
+
+              <div v-else class="px-3 py-2">
+                <p class="text-xs muted">Заметки и комментарии сохранятся в корзине.</p>
+                <div class="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    :disabled="busy"
+                    class="btn-soft px-3 py-1.5 text-xs text-red-600 dark:text-red-400"
+                    @click="remove"
+                  >
+                    <Spinner v-if="busy" />
+                    Удалить
+                  </button>
+                  <button type="button" class="btn-quiet" @click="confirmRemove = false">Отмена</button>
+                </div>
+              </div>
+            </li>
+
+            <li v-if="mode === 'view'">
+              <p class="px-3 py-2 text-sm muted">Чужую задачу менять нельзя.</p>
+            </li>
+          </ul>
+        </ModalSheet>
 
         <BlockEdit
           v-if="editing"

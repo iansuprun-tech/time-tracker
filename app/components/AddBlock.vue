@@ -254,6 +254,7 @@ async function submit() {
               v-model="title"
               placeholder="Название задачи…"
               class="w-full border-0 bg-transparent py-2 text-lg outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
+              @keydown.enter.prevent="submit"
             />
 
             <div class="flex flex-wrap items-center gap-2">
@@ -331,6 +332,8 @@ async function submit() {
           rows="2"
           placeholder="Описание"
           class="mt-3 w-full resize-none border-0 bg-transparent text-sm outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
+          @keydown.enter.meta.prevent="submit"
+          @keydown.enter.ctrl.prevent="submit"
         />
       </form>
 
@@ -338,7 +341,7 @@ async function submit() {
         <div class="flex items-center justify-between gap-3">
           <p v-if="error" class="text-xs text-red-600 dark:text-red-400">{{ error }}</p>
           <p v-else class="text-xs muted">{{ placement }}</p>
-          <button :disabled="saving || !title.trim()" class="btn-primary shrink-0 px-4" @click="submit">
+          <button :disabled="saving || !title.trim()" class="btn-primary shrink-0 px-4" title="Enter" @click="submit">
             <Spinner v-if="saving" />
             Создать
           </button>

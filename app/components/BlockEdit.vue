@@ -205,6 +205,7 @@ async function remove() {
         v-model="title"
         placeholder="Название задачи…"
         class="w-full border-0 bg-transparent py-2 text-lg outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
+        @keydown.enter.prevent="save"
       />
 
       <div class="flex flex-wrap items-center gap-2">
@@ -300,7 +301,7 @@ async function remove() {
           переедет на {{ formatHuman(date, false) }}
         </p>
         <span v-else />
-        <button :disabled="saving || !title.trim()" class="btn-primary shrink-0 px-4" @click="save">
+        <button :disabled="saving || !title.trim()" class="btn-primary shrink-0 px-4" title="Enter" @click="save">
           <Spinner v-if="saving" />
           Сохранить
         </button>

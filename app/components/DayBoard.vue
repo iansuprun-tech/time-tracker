@@ -14,7 +14,22 @@ const query = computed(() => ({
   ...(props.ownerId ? { userId: String(props.ownerId) } : {}),
 }));
 
-const { data, refresh } = await useFetch("/api/day", { query });
+const { data, refresh, status: dayStatus } = await useFetch("/api/day", { query });
+
+/**
+ * При смене даты useFetch держит прежний ответ, пока летит новый, — и блоки
+ * вчерашнего дня стоят под сегодняшним заголовком. Заведённая на завтра задача
+ * из-за этого мигала в сегодняшнем списке и пропадала. Данные чужого дня
+ * показывать нельзя даже долю секунды: гасим их сразу и ждём свои.
+ */
+watch(
+  () => query.value.date,
+  () => {
+    data.value = undefined;
+  },
+);
+
+const loading = computed(() => !data.value && dayStatus.value === "pending");
 
 const blocks = computed(() => data.value?.blocks ?? []);
 const readonly = computed(() => data.value?.readonly ?? false);
@@ -170,7 +185,7 @@ async function reload(part: "day" | "comments" = "day") {
     </div>
 
     <section
-      v-if="!readonly && status === 'draft' && isToday"
+      v-if="!loading && !readonly && status === 'draft' && isToday"
       class="card card-pad mb-5 flex flex-wrap items-center gap-4"
     >
       <span
@@ -198,7 +213,7 @@ async function reload(part: "day" | "comments" = "day") {
     </section>
 
     <AddBlock
-      v-if="!readonly && !finished"
+      v-if="!loading && !readonly && !finished"
       class="mb-5"
       :date="date"
       :label="started ? 'Добавить задачу' : 'Добавить блок в план'"
@@ -206,7 +221,11 @@ async function reload(part: "day" | "comments" = "day") {
       @added="reload()"
     />
 
-    <ul v-if="blocks.length" class="space-y-2">
+    <div v-if="loading" class="card card-pad flex justify-center py-10">
+      <Spinner />
+    </div>
+
+    <ul v-else-if="blocks.length" class="space-y-2">
       <BlockItem
         v-for="b in ordered"
         :key="b.id"
@@ -233,7 +252,7 @@ async function reload(part: "day" | "comments" = "day") {
       </p>
     </div>
 
-    <div v-if="!readonly && started" class="mt-6">
+    <div v-if="!loading && !readonly && started" class="mt-6">
       <FinishDay
         :date="date"
         :mood="data?.day.mood ?? null"

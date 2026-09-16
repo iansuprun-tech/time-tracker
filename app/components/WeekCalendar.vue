@@ -22,7 +22,20 @@ const query = computed(() => ({
   ...(props.ownerId ? { userId: String(props.ownerId) } : {}),
 }));
 
-const { data, refresh } = await useFetch("/api/week", { query });
+const { data, refresh, status: weekStatus } = await useFetch("/api/week", { query });
+
+/**
+ * Прежняя неделя не должна стоять под новым заголовком, пока летит запрос:
+ * блоки прошлой недели мигают на местах, где их нет.
+ */
+watch(
+  () => query.value.from,
+  () => {
+    data.value = undefined;
+  },
+);
+
+const loading = computed(() => !data.value && weekStatus.value === "pending");
 
 const dates = computed(() => Array.from({ length: 7 }, (_, i) => shiftDays(from.value, i)));
 const today = computed(() => localDate());
@@ -467,7 +480,11 @@ const peekId = ref<number | null>(null);
       </div>
     </div>
 
-    <p v-if="!pieces.length && !plans.length" class="mt-4 text-center text-sm muted">
+    <p v-if="loading" class="mt-4 flex justify-center">
+      <Spinner />
+    </p>
+
+    <p v-else-if="!pieces.length && !plans.length" class="mt-4 text-center text-sm muted">
       На этой неделе ещё ничего не запланировано.
     </p>
 

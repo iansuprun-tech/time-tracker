@@ -39,5 +39,8 @@ export function useModal(close: () => void) {
   /** каждая следующая модалка должна лечь поверх предыдущей */
   const zIndex = computed(() => 50 + Math.max(0, stack.value.indexOf(id)) * 10);
 
-  return { zIndex };
+  /** верхняя в стопке: клавиатура принадлежит ей одной */
+  const isTop = computed(() => stack.value[stack.value.length - 1] === id);
+
+  return { zIndex, isTop };
 }

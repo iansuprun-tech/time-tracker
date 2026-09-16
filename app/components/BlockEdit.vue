@@ -193,7 +193,7 @@ async function remove() {
 </script>
 
 <template>
-  <ModalSheet wide title="Правка задачи" @close="emit('close')">
+  <ModalSheet wide submit-on-enter title="Правка задачи" @close="emit('close')" @enter="save">
     <p v-if="failed" class="py-6 text-center text-sm muted">Задача не открылась</p>
 
     <div v-else-if="!loaded" class="flex justify-center py-8">
@@ -205,7 +205,6 @@ async function remove() {
         v-model="title"
         placeholder="Название задачи…"
         class="w-full border-0 bg-transparent py-2 text-lg outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
-        @keydown.enter.prevent="save"
       />
 
       <div class="flex flex-wrap items-center gap-2">

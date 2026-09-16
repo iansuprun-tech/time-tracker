@@ -8,14 +8,36 @@
  * за z-index и на телефоне выходит мельче пальца. Модалка снимает весь этот
  * класс бед разом и ведёт себя одинаково везде.
  */
-defineProps<{
+const props = defineProps<{
   title?: string;
   /** широкое окно — для формы, узкое — для списка выбора */
   wide?: boolean;
+  /** Enter в этом окне равен нажатию главной кнопки */
+  submitOnEnter?: boolean;
 }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; enter: [] }>();
 
-const { zIndex } = useModal(() => emit("close"));
+const { zIndex, isTop } = useModal(() => emit("close"));
+
+/**
+ * Enter принадлежит окну, а не полю. Вешать его на поле ввода бесполезно:
+ * стоит сходить в выбор времени или проекта — и фокус уже не там, где слушают,
+ * а Enter перестаёт работать без всякой видимой причины.
+ *
+ * Shift+Enter не трогаем: в многострочном поле это перевод строки.
+ *
+ * Включается только по просьбе: `preventDefault` на уровне окна ломает Enter
+ * в любой форме внутри — например в поле комментария в карточке задачи.
+ */
+function onEnter(e: KeyboardEvent) {
+  if (e.key !== "Enter" || e.shiftKey || !isTop.value) return;
+  e.preventDefault();
+  emit("enter");
+}
+onMounted(() => {
+  if (props.submitOnEnter) document.addEventListener("keydown", onEnter);
+});
+onBeforeUnmount(() => document.removeEventListener("keydown", onEnter));
 </script>
 
 <template>

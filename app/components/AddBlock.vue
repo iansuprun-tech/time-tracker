@@ -268,14 +268,13 @@ async function submit() {
       <button type="button" class="btn-quiet shrink-0 px-1.5" aria-label="Скрыть" @click="sent = null">✕</button>
     </div>
 
-    <ModalSheet v-if="open" wide :title="statusLine" @close="closeSheet">
+    <ModalSheet v-if="open" wide submit-on-enter :title="statusLine" @close="closeSheet" @enter="submit">
       <form @submit.prevent="submit">
             <input
               ref="titleInput"
               v-model="title"
               placeholder="Название задачи…"
               class="w-full border-0 bg-transparent py-2 text-lg outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
-              @keydown.enter.prevent="submit"
             />
 
             <div class="flex flex-wrap items-center gap-2">
@@ -351,10 +350,8 @@ async function submit() {
         <textarea
           v-model="description"
           rows="2"
-          placeholder="Описание"
+          placeholder="Описание (Shift+Enter — новая строка)"
           class="mt-3 w-full resize-none border-0 bg-transparent text-sm outline-none placeholder:text-black/30 dark:placeholder:text-white/25"
-          @keydown.enter.meta.prevent="submit"
-          @keydown.enter.ctrl.prevent="submit"
         />
       </form>
 

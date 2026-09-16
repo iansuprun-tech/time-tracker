@@ -105,7 +105,7 @@ export function unlockAudio() {
   if (c && c.state === "suspended") void c.resume();
 }
 
-let keepAlive: ConstantSourceNode | null = null;
+let keepAlive: OscillatorNode | null = null;
 /**
  * Счётчик, а не флаг: таймеров на странице теперь несколько — в списке дня
  * и в боковой панели. С флагом любой из них, уходя, гасил бы бодрствование,
@@ -116,10 +116,16 @@ let keepCount = 0;
 /**
  * Держит аудиоконтекст бодрствующим, пока идёт таймер.
  *
- * Уснувший контекст — вторая причина, по которой сигнал «не сыграл вообще»:
+ * Уснувший контекст — причина, по которой сигнал «не сыграл вообще»:
  * запланированные в него вехи умирают вместе с ним, а разбудить его потом
- * некому — жеста-то нет, вкладка в фоне. Источник молчащий (gain 0), он ничего
- * не добавляет к звуку, только не даёт подсистеме решить, что она не нужна.
+ * некому — жеста нет, вкладка в фоне.
+ *
+ * Тон настоящий, а не gain 0. Молчащий источник браузер за звук не считает:
+ * вкладка для него ничего не играет, а значит её можно усыпить и придушить
+ * ей таймеры. Поэтому 30 Гц на еле заметной громкости — ниже того, что
+ * воспроизводят динамики ноутбука, но с ненулевой мощностью на выходе.
+ * Цена — значок звука на вкладке, пока идёт таймер; без него фоновые вехи
+ * не работают вовсе.
  */
 export function keepAudioAwake(on: boolean) {
   const c = context();
@@ -137,10 +143,12 @@ export function keepAudioAwake(on: boolean) {
   if (keepAlive) return;
 
   if (c.state === "suspended") void c.resume();
-  const src = c.createConstantSource();
-  const mute = c.createGain();
-  mute.gain.value = 0;
-  src.connect(mute).connect(c.destination);
+  const src = c.createOscillator();
+  const quiet = c.createGain();
+  src.type = "sine";
+  src.frequency.value = 30;
+  quiet.gain.value = 0.006;
+  src.connect(quiet).connect(c.destination);
   src.start();
   keepAlive = src;
 }

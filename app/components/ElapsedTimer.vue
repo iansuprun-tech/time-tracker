@@ -11,7 +11,7 @@ const props = defineProps<{
   title?: string;
 }>();
 
-const { settings, chime, willChime, scheduleChime, notify, keepAwake } = useSoundSettings();
+const { settings, chime, willChime, scheduleChime, notify, keepAwake, unlock } = useSoundSettings();
 
 const now = ref(Date.now());
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -115,6 +115,8 @@ watch(elapsedSec, (cur) => {
   prev = cur;
   if (!props.chime) return;
 
+  // контекст мог всё же лечь: каждый тик — повод поднять его обратно
+  unlock();
   const ctxNow = audioNow();
 
   // просроченное: фоновая вкладка тикает раз в минуту, а спящий ноутбук не тикает вовсе

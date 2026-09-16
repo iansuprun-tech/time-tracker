@@ -64,6 +64,11 @@ const threadCount = computed(() => props.notes.length + commentCount.value);
 /** читать нечего — открываем сразу на ввод, иначе не воруем фокус и клавиатуру */
 const threadEmpty = computed(() => threadCount.value === 0);
 
+const ICON = {
+  clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 7v5l3 2",
+  calendar: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+};
+
 const STATUSES = [
   { value: "todo", label: "к работе" },
   { value: "doing", label: "в работе" },
@@ -241,7 +246,10 @@ async function saveNote() {
         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
-              <span :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''">
+              <span
+                class="text-[15px] font-medium"
+                :class="block.status === 'done' || block.status === 'dropped' ? 'line-through' : ''"
+              >
                 {{ block.title }}
               </span>
               <span
@@ -279,7 +287,7 @@ async function saveNote() {
               </span>
             </div>
 
-            <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-black/55 dark:text-white/55">
+            <div class="mt-2 flex flex-wrap items-center gap-1.5">
               <form v-if="windowOpen" class="flex flex-wrap items-center gap-1.5" @submit.prevent="saveWindow">
                 <TimeField v-model="fromAt" placeholder="с" />
                 <span class="muted">—</span>
@@ -300,25 +308,42 @@ async function saveNote() {
 
               <button
                 v-else-if="mode !== 'view'"
-                class="underline decoration-dotted underline-offset-2"
-                :title="hasWindow ? 'время фиксировано: блок не сдвинется' : 'задать фиксированное время'"
+                type="button"
+                :class="hasWindow ? 'chip-attr' : 'chip-empty'"
+                :title="hasWindow ? 'Время фиксировано: блок не сдвинется' : 'Задать фиксированное время'"
                 @click="openWindow"
               >
-                <template v-if="windowLabel">📌 {{ windowLabel }}</template>
-                <template v-else>+время</template>
+                <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="ICON.clock" />
+                </svg>
+                <template v-if="windowLabel">{{ windowLabel }}</template>
+                <template v-else>Время</template>
               </button>
 
-              <span v-else-if="windowLabel">📌 {{ windowLabel }}</span>
+              <span v-else-if="windowLabel" class="chip-attr">
+                <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="ICON.clock" />
+                </svg>
+                {{ windowLabel }}
+              </span>
 
               <span
                 v-if="driftLabel"
-                :title="'Расчётное время: блок идёт подряд и сдвинется вместе с днём'"
-                class="text-black/40 dark:text-white/40"
+                class="chip-attr border-dashed text-black/45 dark:text-white/45"
+                title="Расчётное время: блок идёт подряд и сдвинется вместе с днём"
               >
+                <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="ICON.clock" />
+                </svg>
                 {{ driftLabel }}
               </span>
 
-              <span v-if="block.plannedMin != null && !hasWindow">план {{ block.plannedMin }}м</span>
+              <span v-if="block.plannedMin != null && !hasWindow" class="chip-attr">
+                <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="ICON.calendar" />
+                </svg>
+                План {{ block.plannedMin }}м
+              </span>
 
               <ElapsedTimer
                 v-if="ticking"
@@ -354,24 +379,47 @@ async function saveNote() {
 
               <button
                 v-else-if="editable"
-                class="underline decoration-dotted underline-offset-2"
-                :class="over ? 'text-red-600 dark:text-red-400' : ''"
+                type="button"
+                class="chip-attr"
+                :class="over ? 'border-red-500/40 text-red-600 dark:text-red-400' : ''"
+                title="Вписать фактическое время руками"
                 @click="openFact"
               >
-                факт {{ fact }}м<span v-if="block.actualMin != null">*</span>
+                <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="ICON.clock" />
+                </svg>
+                Факт {{ fact }}м<span v-if="block.actualMin != null">*</span>
               </button>
 
-              <span v-else-if="fact > 0">факт {{ fact }}м</span>
+              <span v-else-if="fact > 0" class="chip-attr">
+                <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path :d="ICON.clock" />
+                </svg>
+                Факт {{ fact }}м
+              </span>
 
-              <select
-                v-if="editable"
-                :value="block.status"
-                :disabled="busy"
-                class="field px-2 py-0.5 text-xs disabled:opacity-50"
-                @change="patch({ status: ($event.target as HTMLSelectElement).value })"
-              >
-                <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
-              </select>
+              <!-- статус — тоже кнопка: нативный select без рамки читается как текст -->
+              <span v-if="editable" class="relative inline-flex">
+                <select
+                  :value="block.status"
+                  :disabled="busy"
+                  class="chip-attr appearance-none pr-6 disabled:opacity-50"
+                  @change="patch({ status: ($event.target as HTMLSelectElement).value })"
+                >
+                  <option v-for="s in STATUSES" :key="s.value" :value="s.value">{{ s.label }}</option>
+                </select>
+                <svg
+                  viewBox="0 0 24 24"
+                  class="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 opacity-50"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
             </div>
           </div>
 

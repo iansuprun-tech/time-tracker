@@ -326,6 +326,7 @@ async function saveNote() {
                 :base-min="block.trackedMin"
                 :planned-min="block.plannedMin"
                 :chime="editable"
+                :title="block.title"
               />
 
               <form v-else-if="factOpen" class="flex items-center gap-1" @submit.prevent="saveFact">

@@ -1,7 +1,29 @@
 <script setup lang="ts">
 import { SOUNDS } from "~/composables/useChimes";
 
-const { settings, preview, reset } = useSoundSettings();
+const { settings, preview, reset, askNotifyPermission, notify } = useSoundSettings();
+
+/** Состояние разрешения читаем на клиенте: на сервере Notification нет */
+const permission = ref<NotificationPermission | "unsupported">("default");
+onMounted(() => {
+  permission.value = "Notification" in window ? Notification.permission : "unsupported";
+});
+
+/**
+ * Разрешение спрашиваем по этому клику — браузер даёт его только по жесту.
+ * Отказ запоминается браузером навсегда, вернуть его можно лишь в настройках
+ * сайта, поэтому про это честно пишем под галкой.
+ */
+async function toggleNotify(on: boolean) {
+  if (!on) {
+    settings.value.notify = false;
+    return;
+  }
+  const granted = await askNotifyPermission();
+  permission.value = "Notification" in window ? Notification.permission : "unsupported";
+  settings.value.notify = granted;
+  if (granted) notify("planned", "проверка");
+}
 
 const { data: presets, refresh: reloadPresets } = await useFetch("/api/presets");
 const reload = async () => {
@@ -56,6 +78,33 @@ const MINUTE_FIELD: Partial<Record<ChimeEvent, "approachMin" | "overtimeEveryMin
           <label class="flex items-center gap-2 text-sm">
             <input v-model="settings.enabled" type="checkbox" class="size-4" />
             <span class="font-medium">Звук включён</span>
+          </label>
+
+          <label class="mt-4 flex items-start gap-2 text-sm" :class="settings.enabled ? '' : 'opacity-40'">
+            <input
+              type="checkbox"
+              class="mt-0.5 size-4"
+              :checked="settings.notify"
+              :disabled="!settings.enabled || permission === 'unsupported' || permission === 'denied'"
+              @change="toggleNotify(($event.target as HTMLInputElement).checked)"
+            />
+            <span>
+              <span class="font-medium">Уведомления системы</span>
+              <span class="mt-0.5 block text-xs muted">
+                <template v-if="permission === 'unsupported'">
+                  Этот браузер уведомления не поддерживает.
+                </template>
+                <template v-else-if="permission === 'denied'">
+                  Браузер запретил уведомления для сайта. Вернуть можно только в его
+                  настройках сайта — галка отсюда уже не поможет.
+                </template>
+                <template v-else>
+                  Плашка в углу экрана на каждую веху. Видна и слышна, даже когда вы
+                  в другой программе, — звук вкладки там расслышать труднее. Приглушать
+                  чужой звук страница не умеет: такого в браузере просто нет.
+                </template>
+              </span>
+            </span>
           </label>
 
           <label class="mt-4 block text-sm" :class="settings.enabled ? '' : 'opacity-40'">

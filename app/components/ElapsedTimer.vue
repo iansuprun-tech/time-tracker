@@ -7,17 +7,25 @@ const props = defineProps<{
   plannedMin?: number | null;
   /** звонить только на своём начатом дне: чужой таймер на просмотре молчит */
   chime?: boolean;
+  /** название блока — попадает в текст уведомления */
+  title?: string;
 }>();
 
-const { settings, chime, willChime, scheduleChime } = useSoundSettings();
+const { settings, chime, willChime, scheduleChime, notify, keepAwake } = useSoundSettings();
 
 const now = ref(Date.now());
 let timer: ReturnType<typeof setInterval> | undefined;
 
 onMounted(() => {
   timer = setInterval(() => (now.value = Date.now()), 1000);
+  // пока таймер идёт, аудиоподсистема не должна засыпать: в уснувшем контексте
+  // запланированные вехи умирают, а разбудить его в фоне уже некому
+  if (props.chime) keepAwake(true);
 });
-onUnmounted(() => clearInterval(timer));
+onUnmounted(() => {
+  clearInterval(timer);
+  keepAwake(false);
+});
 
 // сервер отдаёт точку отсчёта, клиент только рисует —
 // иначе после сна ноутбука накапливается расхождение
@@ -86,6 +94,8 @@ const eventOf = (key: string) => key.split(":")[0] as ChimeEvent;
 
 /** ctxAt — время по часам аудиоконтекста, по нему же ловится расхождение */
 const pending = new Map<string, { ctxAt: number; cancel: () => void }>();
+/** по одной плашке на веху: подушенная вкладка отдаёт тики пачкой */
+const notified = new Set<string>();
 
 function cancelPending() {
   for (const p of pending.values()) p.cancel();
@@ -121,6 +131,17 @@ watch(elapsedSec, (cur) => {
     // за один тик может пересечься несколько порогов; звучит только старший
     const last = overdue.at(-1);
     if (last) chime(eventOf(last.key));
+
+    /**
+     * Уведомления шлём по всем пройденным вехам, не только по прозвучавшим:
+     * звук мог отыграть вовремя из аудиопотока, пока вкладка была в фоне,
+     * — и именно тогда плашка нужнее всего.
+     */
+    for (const m of marksIn(before, cur)) {
+      if (notified.has(m.key)) continue;
+      notified.add(m.key);
+      if (willChime(eventOf(m.key))) notify(eventOf(m.key), props.title);
+    }
   }
 
   // будущее кладём в аудиопоток заранее: он не тротлится и сыграет секунда в секунду,

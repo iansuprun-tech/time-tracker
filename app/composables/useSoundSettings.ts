@@ -1,5 +1,5 @@
 import { effectScope } from "vue";
-import { SOUNDS, playSound, unlockAudio, type SoundId } from "./useChimes";
+import { SOUNDS, playSound, unlockAudio, keepAudioAwake, type SoundId } from "./useChimes";
 
 export type ChimeEvent = "start" | "hour" | "approach" | "planned" | "overtime";
 
@@ -15,6 +15,12 @@ export type SoundSettings = {
   enabled: boolean;
   /** 0..1 */
   volume: number;
+  /**
+   * Дублировать вехи системным уведомлением. Это единственное, что видно и
+   * слышно из другой программы: приглушать чужой звук страница не умеет,
+   * такого API в браузере нет.
+   */
+  notify: boolean;
   /** false = звонит только первый час, дальше тишина */
   hourRepeat: boolean;
   approachMin: number;
@@ -25,6 +31,7 @@ export type SoundSettings = {
 const DEFAULTS: SoundSettings = {
   enabled: true,
   volume: 0.6,
+  notify: false,
   hourRepeat: true,
   approachMin: 10,
   overtimeEveryMin: 15,
@@ -56,6 +63,7 @@ function fromStorage(raw: unknown): SoundSettings {
   return {
     enabled: typeof r.enabled === "boolean" ? r.enabled : DEFAULTS.enabled,
     volume: clamp(r.volume, 0, 1, DEFAULTS.volume),
+    notify: typeof r.notify === "boolean" ? r.notify : DEFAULTS.notify,
     hourRepeat: typeof r.hourRepeat === "boolean" ? r.hourRepeat : DEFAULTS.hourRepeat,
     approachMin: clamp(r.approachMin, 1, 120, DEFAULTS.approachMin),
     overtimeEveryMin: clamp(r.overtimeEveryMin, 1, 120, DEFAULTS.overtimeEveryMin),
@@ -100,6 +108,42 @@ export function useSoundSettings() {
     return settings.value.enabled && settings.value.events[event].on;
   }
 
+  /** Разрешение спрашиваем по жесту: без него браузер откажет молча */
+  async function askNotifyPermission() {
+    if (!import.meta.client || !("Notification" in window)) return false;
+    if (Notification.permission === "granted") return true;
+    if (Notification.permission === "denied") return false;
+    return (await Notification.requestPermission()) === "granted";
+  }
+
+  const canNotify = () =>
+    import.meta.client &&
+    "Notification" in window &&
+    Notification.permission === "granted" &&
+    settings.value.enabled &&
+    settings.value.notify;
+
+  /**
+   * Плашка в углу экрана. Видна поверх любой программы, поэтому только ею
+   * веха и достаёт человека, ушедшего из браузера.
+   *
+   * `tag` схлопывает повторы: одна и та же веха не должна копиться стопкой,
+   * если вкладку долго душили и тик пришёл с опозданием.
+   */
+  function notify(event: ChimeEvent, text?: string) {
+    if (!canNotify()) return;
+    const label = CHIME_EVENTS.find((e) => e.id === event)?.label ?? "Таймер";
+    try {
+      new Notification(text ? `${label} · ${text}` : label, {
+        body: "Трекер дня",
+        tag: `tt-${event}`,
+        silent: false,
+      });
+    } catch {
+      // уведомления могут быть запрещены системой — звук всё равно прозвучал
+    }
+  }
+
   function chime(event: ChimeEvent) {
     if (!willChime(event)) return;
     playSound(settings.value.events[event].sound, settings.value.volume);
@@ -121,5 +165,16 @@ export function useSoundSettings() {
     settings.value = fromStorage(null);
   }
 
-  return { settings, chime, willChime, scheduleChime, preview, reset, unlock: unlockAudio };
+  return {
+    settings,
+    chime,
+    willChime,
+    scheduleChime,
+    preview,
+    reset,
+    notify,
+    askNotifyPermission,
+    keepAwake: keepAudioAwake,
+    unlock: unlockAudio,
+  };
 }
